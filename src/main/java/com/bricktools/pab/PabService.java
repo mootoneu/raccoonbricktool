@@ -2,6 +2,7 @@ package com.bricktools.pab;
 
 import com.bricktools.config.BrickToolsProperties;
 import com.bricktools.csv.Csv;
+import com.bricktools.part.PartSize;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Path;
@@ -31,6 +32,7 @@ public class PabService {
   private final Path partsCatalogFile;
   private final Path categoriesCatalogFile;
   private final Path colorsCatalogFile;
+  private final Path mainPartsFile;
 
   public PabService(BrickToolsProperties props) {
     this.purchasesFile = props.dataPath().resolve("bt/pab_purchases.csv");
@@ -38,6 +40,7 @@ public class PabService {
     this.partsCatalogFile = props.dataPath().resolve("re/parts.csv");
     this.categoriesCatalogFile = props.dataPath().resolve("re/part_categories.csv");
     this.colorsCatalogFile = props.dataPath().resolve("re/colors.csv");
+    this.mainPartsFile = props.dataPath().resolve("bt/main_parts.csv");
   }
 
   public synchronized List<Map<String, Object>> purchases() throws IOException {
@@ -95,6 +98,7 @@ public class PabService {
     Map<String, Map<String, String>> partCatalog = catalog(partsCatalogFile, "part_num");
     Map<String, String> categoryNames = categoryNames();
     Map<String, Map<String, String>> colorCatalog = catalog(colorsCatalogFile, "id");
+    Map<String, String> sizes = PartSize.index(mainPartsFile);
 
     List<Map<String, Object>> result = new ArrayList<>();
     for (Map<String, String> row : Csv.read(partsFile)) {
@@ -113,6 +117,7 @@ public class PabService {
       entry.put("partColorId", toInt(colorId));
       entry.put("quantity", toInt(row.get("Quantity")));
       entry.put("partName", clean(part.get("name")));
+      entry.put("size", sizes.getOrDefault(partNumber, ""));
       entry.put("partCategory", categoryNames.getOrDefault(clean(part.get("part_cat_id")), ""));
       entry.put("colorName", clean(color.get("name")));
       entry.put("colorRgb", clean(color.get("rgb")));

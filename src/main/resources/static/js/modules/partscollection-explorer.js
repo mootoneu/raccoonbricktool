@@ -403,6 +403,7 @@
       return;
     }
     $('[data-tab="collection"]').trigger('click');
+    $('#collection-size').val('');
     $('#collection-search').val(value).trigger('input').trigger('focus');
   }
 
@@ -517,6 +518,7 @@
       $row.append(partImageCell(part));
       $row.append($('<td></td>').text(part.partNumber || ''));
       $row.append($('<td></td>').text(part.name || ''));
+      $row.append($('<td></td>').text(part.size || ''));
       if (searching) {
         $row.append($('<td class="main-part-category-col"></td>').text(part.categoryName || ''));
       }

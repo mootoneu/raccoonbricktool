@@ -37,6 +37,10 @@ class PabServiceTest {
         "id,name,rgb,is_trans,num_parts,num_sets,y1,y2\n"
             + "1,White,FFFFFF,False,0,0,0,0\n"
             + "5,Red,C91A09,False,0,0,0,0\n");
+    Files.writeString(dir.resolve("bt/main_parts.csv"),
+        "PartNumber,Name,Size,CategoryId,Material,HasAlternates,Stars\n"
+            + "3001,Brick 2 x 4,2x4x1,11,Plastic,false,2\n"
+            + "3002,Brick 2 x 3,2x3x1,11,Plastic,false,2\n");
     service = new PabService(props());
   }
 
@@ -131,6 +135,7 @@ class PabServiceTest {
         .containsEntry("partColorId", 5)
         .containsEntry("quantity", 20)
         .containsEntry("partName", "Brick 2 x 4")
+        .containsEntry("size", "2x4x1")
         .containsEntry("partCategory", "Bricks")
         .containsEntry("colorName", "Red")
         .containsEntry("colorRgb", "C91A09");

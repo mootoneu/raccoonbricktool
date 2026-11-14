@@ -468,8 +468,9 @@
   // Collection search
   // ============================================================================
 
-  const COLLECTION_PROMPT = 'Type a part number, name, color, or category to search drawers, ' +
-    'BrickOwl parts, and PaB parts.';
+  const COLLECTION_PROMPT = 'Type a part number, name, color, category, or tag, or enter a part ' +
+    'size to search drawers, BrickOwl parts, and PaB parts.';
+  const COLLECTION_SIZE_PROMPT = 'Enter a part size like 2x4 or 2x4x1.';
 
   function collectionTokens(value) {
     return String(value == null ? '' : value)
@@ -484,6 +485,53 @@
       .join(' ')
       .toLowerCase();
     return tokens.every(function (token) { return haystack.indexOf(token) !== -1; });
+  }
+
+  function normalizeSizeText(value) {
+    return String(value == null ? '' : value)
+      .toLowerCase()
+      .replace(/[×*]/g, 'x')
+      .replace(/\s*x\s*/g, 'x')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function sizeDimensions(value) {
+    const normalized = normalizeSizeText(value);
+    return normalized ? normalized.split('x').map(function (part) { return part.trim(); }) : [];
+  }
+
+  /**
+   * Parse the size filter. Returns an empty array when there is no filter, null when the text is
+   * not a size, or the entered dimensions.
+   */
+  function parseSizeQuery(value) {
+    const dimensions = sizeDimensions(value);
+    if (dimensions.length === 0) {
+      return [];
+    }
+    if (dimensions.length < 2 || dimensions.length > 3) {
+      return null;
+    }
+    const valid = dimensions.every(function (dimension) {
+      return /^(?:\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:\.\d+)?)$/.test(dimension);
+    });
+    return valid ? dimensions : null;
+  }
+
+  /**
+   * Compare a stored size with the entered dimensions. Entering only the first dimensions matches
+   * every height, so "2x4" matches both "2x4x1" and "2x4x1/3".
+   */
+  function sizeMatches(size, dimensions) {
+    if (!dimensions || dimensions.length === 0) {
+      return true;
+    }
+    const parts = sizeDimensions(size);
+    if (parts.length < dimensions.length) {
+      return false;
+    }
+    return dimensions.every(function (dimension, index) { return dimension === parts[index]; });
   }
 
   function brickOwlMatches(part, tokens) {
@@ -571,19 +619,65 @@
     });
   }
 
-  function searchCollection(query) {
+  function filterDrawerCardsBySize(cards, dimensions, textSearch) {
+    if (!dimensions || dimensions.length === 0) {
+      return cards;
+    }
+    const result = [];
+    cards.forEach(function (card) {
+      const matched = textSearch
+        ? (Array.isArray(card.matchedParts) ? card.matchedParts : []).filter(function (part) {
+          return sizeMatches(part.size, dimensions);
+        })
+        : matchingChipsBySize(card, dimensions);
+      if (matched.length === 0) {
+        return;
+      }
+      result.push(Object.assign({}, card, { matchedParts: matched }));
+    });
+    return result;
+  }
+
+  function matchingChipsBySize(card, dimensions) {
+    const seen = {};
+    const result = [];
+    (Array.isArray(card.rows) ? card.rows : []).forEach(function (row) {
+      (Array.isArray(row.partChips) ? row.partChips : []).forEach(function (chip) {
+        if (!sizeMatches(chip.size, dimensions)) {
+          return;
+        }
+        const key = String(chip.partNumber == null ? '' : chip.partNumber) + '\u0000'
+          + String(chip.colorId == null ? '' : chip.colorId);
+        if (seen[key]) {
+          return;
+        }
+        seen[key] = true;
+        result.push(chip);
+      });
+    });
+    return result;
+  }
+
+  function searchCollection(query, size) {
     const value = String(query == null ? '' : query).trim();
+    const sizeValue = String(size == null ? '' : size).trim();
+    const sizeFilter = parseSizeQuery(sizeValue);
     const request = ++collectionRequest;
     resetCollectionResults();
-    if (!value) {
+    if (!value && !sizeValue) {
       BrickTools.PartsCollectionShared.report('#collection-msg', COLLECTION_PROMPT);
+      return;
+    }
+    if (sizeFilter === null) {
+      BrickTools.PartsCollectionShared.report('#collection-msg', COLLECTION_SIZE_PROMPT);
       return;
     }
     BrickTools.PartsCollectionShared.report('#collection-msg', 'Searching the part collection…');
 
     const tokens = collectionTokens(value);
+    const searching = Boolean(value) || sizeFilter.length > 0;
     const drawers = BrickTools.api(
-      'GET', '/part-collection/drawers?query=' + encodeURIComponent(value));
+      'GET', '/part-collection/drawers' + (value ? '?query=' + encodeURIComponent(value) : ''));
     const brickOwl = BrickTools.api('GET', '/brickowl/parts');
     const pab = BrickTools.api('GET', '/pab/parts');
 
@@ -598,17 +692,18 @@
 
       let drawerCount = 0;
       if (drawerResult.status === 'fulfilled') {
-        const cards = Array.isArray(drawerResult.value) ? drawerResult.value : [];
+        const cards = filterDrawerCardsBySize(
+          Array.isArray(drawerResult.value) ? drawerResult.value : [], sizeFilter, Boolean(value));
         collectionCards = cards;
         drawerCount = cards.length;
-        renderDrawerCards($('#collection-drawers'), cards, true);
+        renderDrawerCards($('#collection-drawers'), cards, searching);
       }
 
       let brickOwlCount = 0;
       if (brickOwlResult.status === 'fulfilled') {
         const list = Array.isArray(brickOwlResult.value) ? brickOwlResult.value : [];
         const matches = sortedBrickOwlParts(list.filter(function (part) {
-          return brickOwlMatches(part, tokens);
+          return brickOwlMatches(part, tokens) && sizeMatches(part.size, sizeFilter);
         }));
         brickOwlCount = matches.length;
         fillCollectionTable('#collection-brickowl', '#collection-brickowl-parts',
@@ -624,7 +719,7 @@
       if (pabResult.status === 'fulfilled') {
         const list = Array.isArray(pabResult.value) ? pabResult.value : [];
         const matches = sortedPabParts(list.filter(function (part) {
-          return pabMatches(part, tokens);
+          return pabMatches(part, tokens) && sizeMatches(part.size, sizeFilter);
         }));
         pabCount = matches.length;
         fillCollectionTable('#collection-pab', '#collection-pab-parts',
@@ -649,19 +744,31 @@
         || brickOwlResult.status !== 'fulfilled'
         || pabResult.status !== 'fulfilled';
       if (drawerCount + brickOwlCount + pabCount === 0) {
+        const criteria = [];
+        if (value) {
+          criteria.push('"' + value + '"');
+        }
+        if (sizeValue) {
+          criteria.push('size "' + sizeValue + '"');
+        }
         BrickTools.PartsCollectionShared.report('#collection-msg', failed
           ? 'The collection could not be fully searched.'
-          : 'No drawer, BrickOwl part, or PaB part matches "' + value + '".');
+          : 'No drawer, BrickOwl part, or PaB part matches ' + criteria.join(' and ') + '.');
       } else {
         BrickTools.PartsCollectionShared.report('#collection-msg', '');
       }
     });
   }
 
+  function runCollectionSearch() {
+    searchCollection($('#collection-search').val(), $('#collection-size').val());
+  }
+
   function rerunCollectionSearch() {
     const query = String($('#collection-search').val() || '').trim();
-    if (query) {
-      searchCollection(query);
+    const size = String($('#collection-size').val() || '').trim();
+    if (query || size) {
+      searchCollection(query, size);
     }
   }
 
@@ -1368,14 +1475,13 @@
     });
 
     // Collection search
-    $('#collection-search').on('input', function () {
-      const value = this.value;
+    $('#collection-search, #collection-size').on('input', function () {
       if (collectionTimer) {
         clearTimeout(collectionTimer);
       }
       collectionTimer = setTimeout(function () {
         collectionTimer = null;
-        searchCollection(value);
+        runCollectionSearch();
       }, 250);
     }).on('keydown', function (event) {
       if (event.key === 'Enter') {
@@ -1384,7 +1490,7 @@
           clearTimeout(collectionTimer);
           collectionTimer = null;
         }
-        searchCollection(this.value);
+        runCollectionSearch();
       }
     });
 

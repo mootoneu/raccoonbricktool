@@ -573,6 +573,7 @@ Filtered view of LEGO parts with additional metadata.
 |-------|------|-------------|
 | PartNumber | string (PK) | Part number (from `data.re.parts.part_num`) |
 | Name | string | Part name (from `data.re.parts.name`) |
+| Size | string | Part size written as `<width>x<length>x<height>`, for example `2x4x1` or `2x4x1/3`. Inferred from the part name. When the name omits the height, it defaults to `1`, or `1/3` for the `Plate` and `Tile` category groups. Empty when the name has no size. |
 | CategoryId | integer (FK) | Category ID (references `data.bt.PartCategories.Id`) |
 | Material | string | Material the part is made of (from `data.re.parts.part_material`) |
 | HasAlternates | boolean | Indicates if the part is linked to other parts via `data.re.part_relationships`. Defaults to false. |

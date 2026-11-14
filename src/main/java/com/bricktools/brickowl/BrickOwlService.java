@@ -2,6 +2,7 @@ package com.bricktools.brickowl;
 
 import com.bricktools.config.BrickToolsProperties;
 import com.bricktools.csv.Csv;
+import com.bricktools.part.PartSize;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -37,12 +38,14 @@ public class BrickOwlService {
   private final RestClient rest;
   private final Path ordersFile;
   private final Path itemsFile;
+  private final Path mainPartsFile;
 
   public BrickOwlService(BrickToolsProperties props, RestClient.Builder builder) {
     this.props = props;
     this.rest = builder.baseUrl(props.brickowl().baseUrl()).build();
     this.ordersFile = props.dataPath().resolve("bo/orders.csv");
     this.itemsFile = props.dataPath().resolve("bo/order_items.csv");
+    this.mainPartsFile = props.dataPath().resolve("bt/main_parts.csv");
   }
 
   public synchronized Map<String, Object> update() throws IOException {
@@ -160,6 +163,7 @@ public class BrickOwlService {
     for (Map<String, String> order : Csv.read(ordersFile)) {
       ordersById.put(order.get("Id"), order);
     }
+    Map<String, String> sizes = PartSize.index(mainPartsFile);
 
     Map<String, PartAggregate> parts = new LinkedHashMap<>();
     for (Map<String, String> item : Csv.read(itemsFile)) {
@@ -178,7 +182,11 @@ public class BrickOwlService {
     }
 
     return parts.values().stream()
-        .map(aggregate -> aggregate.toRow(ordersById))
+        .map(aggregate -> {
+          Map<String, Object> row = aggregate.toRow(ordersById);
+          row.put("size", sizeOf(String.valueOf(row.get("designIds")), sizes));
+          return row;
+        })
         .sorted(Comparator
             .comparing((Map<String, Object> row) -> String.valueOf(row.getOrDefault("name", "")),
                 String.CASE_INSENSITIVE_ORDER)
@@ -334,6 +342,19 @@ public class BrickOwlService {
       return current;
     }
     return candidate == null ? "" : candidate.trim();
+  }
+
+  private static String sizeOf(String designIds, Map<String, String> sizes) {
+    if (designIds == null) {
+      return "";
+    }
+    for (String value : designIds.split(",")) {
+      String size = sizes.get(value.trim());
+      if (size != null && !size.isBlank()) {
+        return size;
+      }
+    }
+    return "";
   }
 
   private static void addIds(Set<String> target, String values) {

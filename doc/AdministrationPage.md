@@ -126,6 +126,7 @@ The card generates or updates `data/bt/main_parts.csv` from the Rebrickable part
 Behaviour:
 
 - Parts of hidden categories and child parts are excluded.
+- The size is inferred from the part name and category group. When the name omits the height, it defaults to `1`, or `1/3` for plates and tiles. Parts without a size in their name keep an empty size.
 - Existing star ratings are kept.
 - The completion message reports the number of parts kept, the parts excluded because of hidden categories, the child parts excluded, and the number of parts with alternates.
 

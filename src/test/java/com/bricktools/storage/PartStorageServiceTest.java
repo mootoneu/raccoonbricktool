@@ -49,6 +49,10 @@ class PartStorageServiceTest {
     Files.writeString(dir.resolve("bt/part_default_color.csv"),
         "PartNumber,ColorId\n"
             + "3001,5\n");
+    Files.writeString(dir.resolve("bt/main_parts.csv"),
+        "PartNumber,Name,Size,CategoryId,Material,HasAlternates,Stars\n"
+            + "3001,Brick 2 x 4,2x4x1,11,Plastic,false,2\n"
+            + "3003,Plate 1 x 2,1x2x1/3,12,Plastic,false,2\n");
     service = new PartStorageService(props());
   }
 
@@ -142,6 +146,7 @@ class PartStorageServiceTest {
     assertThat(rows.get(0)).containsEntry("parts", "3001;§Plates")
         .containsEntry("colors", "5;Any").containsEntry("amount", "10");
     assertThat(cast(rows.get(0).get("partChips"))).extracting("partNumber").containsExactly("3001");
+    assertThat(cast(rows.get(0).get("partChips"))).extracting("size").containsExactly("2x4x1");
     assertThat(cast(rows.get(0).get("categoryChips"))).extracting("name").containsExactly("Plates");
     assertThat(cast(rows.get(0).get("colorChips"))).extracting("name").containsExactly("Red", "Any");
   }
@@ -157,6 +162,8 @@ class PartStorageServiceTest {
         .extracting("partNumber").contains("3001");
     assertThat(cast(service.drawers("Plate 1 x 2").get(0).get("matchedParts")))
         .extracting("partNumber").contains("3003");
+    assertThat(cast(service.drawers("Plate 1 x 2").get(0).get("matchedParts")))
+        .extracting("size").contains("1x2x1/3");
     assertThat(cast(service.drawers("Blue").get(0).get("matchedParts")))
         .extracting("partNumber").contains("3003");
     assertThat(cast(service.drawers("Plates").get(0).get("matchedParts")))

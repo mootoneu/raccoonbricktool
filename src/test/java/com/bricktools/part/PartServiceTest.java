@@ -26,7 +26,7 @@ class PartServiceTest {
     Files.createDirectories(dir.resolve("re"));
     Files.writeString(dir.resolve("bt/part_categories.csv"),
         "Id,Name,Group,Hidden\n"
-            + "1,Baseplates,Baseplate,false\n"
+            + "1,Baseplates,Plate,false\n"
             + "11,Bricks,Brick,false\n"
             + "12,Bricks Wedged,Brick,false\n"
             + "13,Technic Bricks,Technic,false\n"
@@ -49,8 +49,8 @@ class PartServiceTest {
   @Test
   void generateMainPartsExcludesHiddenCategoriesAndChildParts() throws IOException {
     Files.writeString(dir.resolve("bt/main_parts.csv"),
-        "PartNumber,Name,CategoryId,Material,HasAlternates,Stars\n"
-            + "3001,Old brick name,11,Plastic,false,5\n");
+        "PartNumber,Name,Size,CategoryId,Material,HasAlternates,Stars\n"
+            + "3001,Old brick name,2x4x1,11,Plastic,false,5\n");
 
     Map<String, Object> result = service.generateMainParts();
 
@@ -61,8 +61,10 @@ class PartServiceTest {
         .containsEntry("withAlternates", 1);
     String csv = Files.readString(dir.resolve("bt/main_parts.csv"));
     assertThat(csv)
-        .startsWith("PartNumber,Name,CategoryId,Material,HasAlternates,Stars")
-        .contains("3001,Brick 2 x 4,11,Plastic,true,5")
+        .startsWith("PartNumber,Name,Size,CategoryId,Material,HasAlternates,Stars")
+        .contains("3001,Brick 2 x 4,2x4x1,11,Plastic,true,5")
+        .contains("4001,Baseplate 32 x 32,32x32x1/3,1,Plastic,false,2")
+        .contains("5001,Technic Brick 1 x 2,1x2x1,13,Plastic,false,2")
         .doesNotContain("3002")
         .doesNotContain("3003")
         .doesNotContain("9999");
@@ -75,6 +77,7 @@ class PartServiceTest {
     assertThat(service.mainParts(1).get(0))
         .containsEntry("partNumber", "4001")
         .containsEntry("name", "Baseplate 32 x 32")
+        .containsEntry("size", "32x32x1/3")
         .containsEntry("categoryId", 1)
         .containsEntry("material", "Plastic")
         .containsEntry("hasAlternates", false)
@@ -85,9 +88,9 @@ class PartServiceTest {
   void categoriesAreGroupedAndHideHiddenCategories() throws IOException {
     List<Map<String, Object>> groups = service.categories();
 
-    assertThat(groups).extracting("group").containsExactly("Baseplate", "Brick", "Technic");
-    assertThat(groups.get(1)).containsEntry("group", "Brick");
-    assertThat(categoriesOf(groups.get(1)))
+    assertThat(groups).extracting("group").containsExactly("Brick", "Plate", "Technic");
+    assertThat(groups.get(0)).containsEntry("group", "Brick");
+    assertThat(categoriesOf(groups.get(0)))
         .extracting("name")
         .containsExactly("Bricks", "Bricks Wedged");
     assertThat(groups)
@@ -123,12 +126,14 @@ class PartServiceTest {
         .containsExactly("3001", "5001");
     assertThat(partsOf(result).get(0))
         .containsEntry("name", "Brick 2 x 4")
+        .containsEntry("size", "2x4x1")
         .containsEntry("categoryName", "Bricks")
         .containsEntry("material", "Plastic")
         .containsEntry("hasAlternates", true)
         .containsEntry("stars", 2);
     assertThat(partsOf(result).get(1))
-        .containsEntry("categoryName", "Technic Bricks");
+        .containsEntry("categoryName", "Technic Bricks")
+        .containsEntry("size", "1x2x1");
 
     Map<String, Object> byNumber = service.searchMainParts("4001");
     assertThat(byNumber).containsEntry("total", 1);
@@ -154,7 +159,7 @@ class PartServiceTest {
         .containsEntry("partNumber", "3001")
         .containsEntry("stars", 4);
     assertThat(Files.readString(dir.resolve("bt/main_parts.csv")))
-        .contains("3001,Brick 2 x 4,11,Plastic,true,4");
+        .contains("3001,Brick 2 x 4,2x4x1,11,Plastic,true,4");
   }
 
   @Test
@@ -182,8 +187,8 @@ class PartServiceTest {
     assertThat(service.mainParts(11).get(0)).containsEntry("stars", 5);
     assertThat(service.mainParts(1).get(0)).containsEntry("stars", 5);
     assertThat(Files.readString(dir.resolve("bt/main_parts.csv")))
-        .contains("3001,Brick 2 x 4,11,Plastic,true,5")
-        .contains("4001,Baseplate 32 x 32,1,Plastic,false,5");
+        .contains("3001,Brick 2 x 4,2x4x1,11,Plastic,true,5")
+        .contains("4001,Baseplate 32 x 32,32x32x1/3,1,Plastic,false,5");
   }
 
   @Test
@@ -241,6 +246,7 @@ class PartServiceTest {
     assertThat(info)
         .containsEntry("partNumber", "3001")
         .containsEntry("name", "Brick 2 x 4")
+        .containsEntry("size", "2x4x1")
         .containsEntry("material", "Plastic")
         .containsEntry("hasAlternates", true)
         .containsEntry("stars", 2)
@@ -258,6 +264,7 @@ class PartServiceTest {
     assertThat(child)
         .containsEntry("partNumber", "3002")
         .containsEntry("name", "Brick 2 x 3")
+        .containsEntry("size", "2x3x1")
         .containsEntry("material", "Plastic")
         .containsEntry("hasAlternates", false)
         .containsEntry("stars", 0)

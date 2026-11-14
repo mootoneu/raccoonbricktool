@@ -133,6 +133,11 @@ class BrickOwlServiceTest {
   @Test
   void partsAreGroupedAcrossOrdersAndConditions() throws IOException {
     Files.createDirectories(dir.resolve("bo"));
+    Files.createDirectories(dir.resolve("bt"));
+    Files.writeString(dir.resolve("bt/main_parts.csv"),
+        "PartNumber,Name,Size,CategoryId,Material,HasAlternates,Stars\n"
+            + "3001,Brick 2 x 4,2x4x1,11,Plastic,false,2\n"
+            + "3002,Brick 2 x 3,2x3x1,11,Plastic,false,2\n");
     Files.writeString(dir.resolve("bo/orders.csv"), String.join("\n", ORDER_HEADER,
         order("1", "2024-03-01T10:00:00Z", "Shop A", "2", "10"),
         order("2", "2024-05-01T10:00:00Z", "Shop A", "0", "20"),
@@ -154,6 +159,7 @@ class BrickOwlServiceTest {
         .containsEntry("colorName", "White")
         .containsEntry("designIds", "3001")
         .containsEntry("itemNumbers", "300101,300102,300103")
+        .containsEntry("size", "2x4x1")
         .containsEntry("totalQuantity", 16.0);
 
     @SuppressWarnings("unchecked")

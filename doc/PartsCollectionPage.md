@@ -57,6 +57,7 @@ The explorer is split into a category tree on the left and a main-parts table on
 | Image | Clicking opens the part information modal |
 | Part number | |
 | Name | |
+| Size | Width × length × height, for example `2x4x1` or `2x4x1/3`; empty when unknown |
 | Category | Shown only in the Search category |
 | Material | |
 | Has alternates | View icon button opens the alternates modal |
@@ -96,13 +97,14 @@ Selecting or clearing a part updates the header checkbox, which is indeterminate
 The tab searches the part collection and shows the storage drawers that contain matching parts, as well as matching BrickOwl items and PaB parts.
 
 - The search field matches the part number, part name, color name or id, category name or id, and free-text tags. It is case-insensitive and searches after a short delay; pressing Enter searches immediately.
+- The **Size** field filters the same results by part size. Enter `2x4` to match every height, or `2x4x1` / `2x4x1/3` for an exact size. The size values come from the main parts. The field can be used alone or together with the text search.
 - Results are one card per matching drawer. Each card shows the storage id and drawer label, the storage model and location, and the parts that match the search.
 - When a drawer contains several matching parts, up to 200 are shown.
 - Each result card has **Set active** (sets the drawer as the active container) and **Add content** (opens the drawer content form) icon buttons. The content rules shown on the card can be edited or deleted in place with icon buttons.
 - Setting a drawer active loads the drawer list, so the header navigation can move through the drawers of the storage.
 - Below the drawers, two tables list the matching items from the BrickOwl parts and from the PaB parts. They use the same columns as the corresponding tabs and are hidden when they have no match. PaB quantities are summed per part and color across all purchases.
 - When nothing matches in any source, a message explains that no drawer, BrickOwl part, or PaB part matches the search.
-- The drawer search is exposed by `GET /api/part-collection/drawers?query=`; the other sources are `GET /api/brickowl/parts` and `GET /api/pab/parts`.
+- The drawer search is exposed by `GET /api/part-collection/drawers?query=`; the other sources are `GET /api/brickowl/parts` and `GET /api/pab/parts`. Drawer parts, BrickOwl items, and PaB parts include the `size` field used by the filter.
 
 ## Part Storage Tab
 
@@ -264,7 +266,7 @@ The modal is implemented once in `js/modules/part-info.js` (`BrickTools.PartInfo
 | `PUT /api/parts/main-parts/{partNumber}/stars` | Save a star rating |
 | `PUT /api/parts/main-parts/stars` | Save the same star rating for several parts; body `{ "partNumbers": [...], "stars": 3 }` |
 | `GET /api/parts/main-parts/{partNumber}/alternates` | Alternates of a main part |
-| `GET /api/parts/{partNumber}/info` | Name, material, alternates, stars, main-part flag, category, default color, and available colors |
+| `GET /api/parts/{partNumber}/info` | Name, size, material, alternates, stars, main-part flag, category, default color, and available colors |
 | `PUT /api/parts/{partNumber}/default-color` | Store the default image color; body `{ "colorId": 5 }` |
 | `GET /api/parts/{partNumber}/image` | Part image, optionally with `?colorId=` |
 | `GET /api/parts/items/{itemNumber}/image` | Part image by BrickOwl item number |

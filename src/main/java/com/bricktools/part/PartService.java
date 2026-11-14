@@ -24,7 +24,7 @@ import org.springframework.stereotype.Service;
 public class PartService {
 
   private static final List<String> MAIN_PART_HEADERS =
-      List.of("PartNumber", "Name", "CategoryId", "Material", "HasAlternates", "Stars");
+      List.of("PartNumber", "Name", "Size", "CategoryId", "Material", "HasAlternates", "Stars");
   private static final int SEARCH_LIMIT = 500;
   private static final Comparator<Map<String, String>> BY_NAME = Comparator
       .comparing((Map<String, String> row) -> clean(row.get("Name")), String.CASE_INSENSITIVE_ORDER)
@@ -48,9 +48,12 @@ public class PartService {
    */
   public synchronized Map<String, Object> generateMainParts() throws IOException {
     Set<String> hiddenCategories = new HashSet<>();
+    Map<String, String> categoryGroups = new HashMap<>();
     for (Map<String, String> category : Csv.read(categoriesFile)) {
+      String categoryId = clean(category.get("Id"));
+      categoryGroups.put(categoryId, clean(category.get("Group")));
       if (isTrue(category.get("Hidden"))) {
-        hiddenCategories.add(clean(category.get("Id")));
+        hiddenCategories.add(categoryId);
       }
     }
 
@@ -100,6 +103,8 @@ public class PartService {
       Map<String, String> row = new LinkedHashMap<>();
       row.put("PartNumber", partNumber);
       row.put("Name", clean(part.get("name")));
+      row.put("Size", PartSize.parse(clean(part.get("name")),
+          categoryGroups.getOrDefault(clean(part.get("part_cat_id")), "")));
       row.put("CategoryId", clean(part.get("part_cat_id")));
       row.put("Material", clean(part.get("part_material")));
       row.put("HasAlternates", String.valueOf(hasAlternates));
@@ -170,6 +175,7 @@ public class PartService {
       Map<String, Object> entry = new LinkedHashMap<>();
       entry.put("partNumber", clean(row.get("PartNumber")));
       entry.put("name", clean(row.get("Name")));
+      entry.put("size", clean(row.get("Size")));
       entry.put("categoryId", toInt(row.get("CategoryId")));
       entry.put("material", clean(row.get("Material")));
       entry.put("hasAlternates", isTrue(row.get("HasAlternates")));
@@ -214,6 +220,7 @@ public class PartService {
       Map<String, Object> entry = new LinkedHashMap<>();
       entry.put("partNumber", clean(row.get("PartNumber")));
       entry.put("name", clean(row.get("Name")));
+      entry.put("size", clean(row.get("Size")));
       entry.put("categoryId", toInt(categoryId));
       entry.put("categoryName", categoryNames.getOrDefault(categoryId, ""));
       entry.put("material", clean(row.get("Material")));
@@ -275,19 +282,28 @@ public class PartService {
     int categoryId = main == null
         ? toInt(part.get("part_cat_id")) : toInt(main.get("CategoryId"));
     String categoryName = "";
+    String categoryGroup = "";
     boolean categoryHidden = false;
     for (Map<String, String> category : Csv.read(categoriesFile)) {
       if (String.valueOf(categoryId).equals(clean(category.get("Id")))) {
         categoryName = clean(category.get("Name"));
+        categoryGroup = clean(category.get("Group"));
         categoryHidden = isTrue(category.get("Hidden"));
         break;
       }
     }
 
+    String name = main == null ? clean(part.get("name")) : clean(main.get("Name"));
+    String size = main == null ? "" : clean(main.get("Size"));
+    if (size.isEmpty()) {
+      size = PartSize.parse(name, categoryGroup);
+    }
+
     Integer stars = main == null ? null : toInt(main.get("Stars"));
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("partNumber", key);
-    result.put("name", main == null ? clean(part.get("name")) : clean(main.get("Name")));
+    result.put("name", name);
+    result.put("size", size);
     result.put("material", main == null ? clean(part.get("part_material")) : clean(main.get("Material")));
     result.put("hasAlternates", hasAlternates);
     result.put("stars", stars == null ? 0 : stars);

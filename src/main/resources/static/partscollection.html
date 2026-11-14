@@ -63,6 +63,7 @@
                   <th class="main-part-image-col">Image</th>
                   <th class="sortable" data-key="partNumber">Part number</th>
                   <th class="sortable" data-key="name">Name</th>
+                  <th class="sortable" data-key="size">Size</th>
                   <th class="sortable main-part-category-col" data-key="categoryName" hidden>Category</th>
                   <th class="sortable" data-key="material">Material</th>
                   <th class="sortable" data-key="hasAlternates">Has alternates</th>
@@ -82,6 +83,9 @@
         <input type="search" id="collection-search" class="collection-search"
                placeholder="Search parts by number, name, color, category or tag"
                aria-label="Search the part collection">
+        <input type="search" id="collection-size" class="collection-size"
+               placeholder="Size, e.g. 2x4 or 2x4x1"
+               aria-label="Filter the part collection by part size">
         <span id="collection-count" class="muted"></span>
       </div>
       <div id="collection-drawers" class="drawer-cards"></div>

@@ -2,6 +2,7 @@ package com.bricktools.storage;
 
 import com.bricktools.config.BrickToolsProperties;
 import com.bricktools.csv.Csv;
+import com.bricktools.part.PartSize;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,6 +41,7 @@ public class PartStorageService {
   private final Path colorsFile;
   private final Path partColorsFile;
   private final Path defaultColorsFile;
+  private final Path mainPartsFile;
 
   private Catalog catalog;
   private long catalogStamp = Long.MIN_VALUE;
@@ -54,6 +56,7 @@ public class PartStorageService {
     this.colorsFile = data.resolve("re/colors.csv");
     this.partColorsFile = data.resolve("bt/part_color_url.csv");
     this.defaultColorsFile = data.resolve("bt/part_default_color.csv");
+    this.mainPartsFile = data.resolve("bt/main_parts.csv");
   }
 
   // ============================================================================
@@ -340,6 +343,7 @@ public class PartStorageService {
       }
       data.partColorIds.computeIfAbsent(partNumber, key -> new ArrayList<>()).add(colorId);
     }
+    data.sizes.putAll(PartSize.index(mainPartsFile));
     catalog = data;
     catalogStamp = stamp;
     return data;
@@ -348,7 +352,7 @@ public class PartStorageService {
   private long catalogStamp() throws IOException {
     long stamp = 17;
     for (Path file : List.of(categoriesFile, rebrickableCategoriesFile, partsFile, colorsFile,
-        partColorsFile, defaultColorsFile)) {
+        partColorsFile, defaultColorsFile, mainPartsFile)) {
       if (Files.isRegularFile(file)) {
         stamp = stamp * 31 + Files.getLastModifiedTime(file).toMillis();
         stamp = stamp * 31 + Files.size(file);
@@ -549,6 +553,7 @@ public class PartStorageService {
       Map<String, Object> chip = new LinkedHashMap<>();
       chip.put("partNumber", token);
       chip.put("name", part == null ? "" : part.name());
+      chip.put("size", data.sizes.getOrDefault(token, ""));
       chip.put("categoryName", part == null ? "" : part.categoryName());
       ColorInfo color = part == null ? null : colorFor(data, part, null);
       chip.put("colorId", color == null ? null : toInt(color.id()));
@@ -622,6 +627,7 @@ public class PartStorageService {
     Map<String, Object> entry = new LinkedHashMap<>();
     entry.put("partNumber", part.number());
     entry.put("name", part.name());
+    entry.put("size", data.sizes.getOrDefault(part.number(), ""));
     entry.put("categoryId", toInt(part.categoryId()));
     entry.put("categoryName", part.categoryName());
     entry.put("colorId", color == null ? null : toInt(color.id()));
@@ -921,5 +927,6 @@ public class PartStorageService {
     private final Map<String, ColorInfo> colors = new LinkedHashMap<>();
     private final Map<String, List<String>> partColorIds = new HashMap<>();
     private final Map<String, String> defaultColors = new HashMap<>();
+    private final Map<String, String> sizes = new HashMap<>();
   }
 }
