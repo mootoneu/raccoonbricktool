@@ -56,7 +56,7 @@
             <table class="data" id="main-parts" hidden>
               <thead>
                 <tr>
-                  <th class="main-part-select-col">
+                  <th class="select-col">
                     <input type="checkbox" id="main-parts-select-all-visible"
                            aria-label="Select all visible parts" title="Select all visible parts">
                   </th>
@@ -139,10 +139,21 @@
                aria-label="Filter storages">
         <span id="storage-count" class="muted"></span>
       </div>
+      <div id="part-storage-selection" class="selection-toolbar" hidden>
+        <span id="part-storage-selected-count" class="muted">0 storages selected</span>
+        <button type="button" id="part-storage-select-all" class="btn secondary"
+                data-icon="selectAll">Select all visible</button>
+        <button type="button" id="part-storage-clear-selection" class="btn secondary"
+                data-icon="clear">Clear selection</button>
+      </div>
       <div class="table-wrap">
         <table class="data" id="part-storage">
           <thead>
             <tr>
+              <th class="select-col">
+                <input type="checkbox" id="part-storage-select-all-visible"
+                       aria-label="Select all visible storages" title="Select all visible storages">
+              </th>
               <th class="sortable" data-key="order">Order</th>
               <th class="sortable" data-key="id">Id</th>
               <th class="sortable" data-key="model">Model</th>
@@ -403,6 +414,7 @@
   <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
   <script src="js/common.js"></script>
   <script src="js/color.js"></script>
+  <script src="js/modules/selection-control.js"></script>
   <script src="js/modules/part-info.js"></script>
   <script src="js/modules/partscollection-shared.js"></script>
   <script src="js/modules/partscollection-storage.js"></script>

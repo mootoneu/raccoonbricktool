@@ -86,7 +86,7 @@ The table is sortable; the default sort is by stars, descending.
 - **Set stars**: the 0-to-5 star buttons apply the rating to every selected part at once with `PUT /api/parts/main-parts/stars` and the body `{ "partNumbers": ["3001", "3002"], "stars": 3 }`.
 - **Add to container**: sends every selected part to the active container at once. The same action is used by the row button. When no container is active, a message asks the user to set one from the Collection, Part storage, or Storage drawers tab.
 
-Selecting or clearing a part updates the header checkbox, which is indeterminate when only some visible parts are selected. The selection is kept when sorting or filtering, but it is cleared when the selected category changes (including when a new cross-category search runs).
+Selecting or clearing a part updates the header checkbox, which is indeterminate when only some visible parts are selected. The selection is kept when sorting or filtering, but it is cleared when the selected category changes (including when a new cross-category search runs). The checkbox column and toolbar are provided by the reusable selection control in `js/modules/selection-control.js`; each table keeps its own independent selection.
 
 **Alternates modal:** opens from the View icon button and calls `GET /api/parts/main-parts/{partNumber}/alternates`. It shows the relation type, the child part (number, name, category id, material), and the parent part (number and name). The modal closes with the close icon button, a click outside, or Escape.
 
@@ -112,6 +112,7 @@ Lists the physical part storages stored in `data/bt/part_storage.csv`.
 
 | Column | Source |
 | ------ | ------ |
+| Select | Selection checkbox; the header checkbox selects or clears all visible storages |
 | Order | `Order` |
 | Id | `Id` |
 | Model | `Model` (for example "IKEA Alex") |
@@ -127,6 +128,8 @@ Actions:
 - **View** (eye icon) opens the **Storage drawers** tab filtered to the storage.
 - **Edit** (pencil icon) opens the storage form.
 - **Set active** (check icon) makes the storage the active container.
+
+The checkbox column selects individual storages. The selection toolbar above the table shows the selected count and provides **Select all visible** and **Clear selection**. Select-all only adds the storages currently visible after filtering and sorting, hidden selections are preserved, and the header checkbox is indeterminate when only some visible storages are selected. The selection is independent from the one in the Part explorer. The active storage row is highlighted separately from the selection. There are no bulk storage actions yet because the API only supports listing, creating and updating storages.
 
 The **Add storage** button opens the same form for a new storage. The form asks for the id, order, model, drawer count, location, and description. The id cannot be changed after creation. The drawer count is between `0` and `52`; drawers are named `a`–`z` for the first 26 and `A`–`Z` for the next 26. A storage with a drawer count of `0` has no drawers and can only be used as a whole container.
 

@@ -11,6 +11,7 @@
   let storageCallbacks = [];
   let storageSort = { key: 'order', dir: 1 };
   let storageFilter = '';
+  let storageSelection = null;
 
   let drawerCards = [];
   let drawersLoading = false;
@@ -130,6 +131,20 @@
   // Storages
   // ============================================================================
 
+  /**
+   * Create a selection checkbox cell for a storage row.
+   * @param {Object} storage - Storage row
+   * @returns {jQuery} jQuery TD element
+   */
+  function storageSelectionCell(storage) {
+    const $cell = $('<td class="select-col"></td>');
+    $('<input type="checkbox" class="storage-select">')
+      .attr('data-storage-id', storage.id)
+      .attr('aria-label', 'Select storage ' + (storage.id || storage.model || ''))
+      .appendTo($cell);
+    return $cell;
+  }
+
   function renderStorages() {
     const fmt = BrickTools.fmt;
     const $tbody = $('#part-storage tbody').empty();
@@ -150,16 +165,22 @@
       fmt.number(visible.length) + ' of ' + fmt.number(storages.length) + ' storage(s)');
 
     if (visible.length === 0) {
-      $tbody.append('<tr><td colspan="8" class="muted">' +
+      $tbody.append('<tr><td colspan="9" class="muted">' +
         (storages.length === 0 ? 'No part storage yet.' : 'No storage matches the filter.') +
         '</td></tr>');
+      if (storageSelection) {
+        storageSelection.setVisibleIds([]);
+      }
       return;
     }
 
     visible.forEach(function (storage) {
       const isActive = active && active.type === 'storage'
         && String(active.storageId) === String(storage.id);
-      const $row = $('<tr></tr>').toggleClass('selected', Boolean(isActive));
+      const $row = $('<tr></tr>')
+        .attr('data-storage-id', storage.id)
+        .toggleClass('active-storage-row', Boolean(isActive));
+      $row.append(storageSelectionCell(storage));
       $row.append($('<td></td>').text(fmt.number(storage.order != null ? storage.order : 0)));
       $row.append($('<td class="storage-id"></td>').text(storage.id || ''));
       $row.append($('<td></td>').text(storage.model || ''));
@@ -178,6 +199,12 @@
       $row.append($actions);
       $tbody.append($row);
     });
+
+    if (storageSelection) {
+      storageSelection.setVisibleIds(visible.map(function (storage) {
+        return String(storage.id);
+      }));
+    }
   }
 
   function findStorage(id) {
@@ -1348,6 +1375,19 @@
   // ============================================================================
 
   function init() {
+    storageSelection = BrickTools.SelectionControl.create({
+      table: '#part-storage',
+      toolbar: '#part-storage-selection',
+      rowIdAttr: 'data-storage-id',
+      checkboxSelector: '.storage-select',
+      headerCheckbox: '#part-storage-select-all-visible',
+      countLabel: '#part-storage-selected-count',
+      selectAllButton: '#part-storage-select-all',
+      clearButton: '#part-storage-clear-selection',
+      itemLabel: 'storage',
+      itemLabelPlural: 'storages'
+    });
+
     // Storage table
     $('#storage-add').on('click', function () {
       if (!storagesLoaded) {

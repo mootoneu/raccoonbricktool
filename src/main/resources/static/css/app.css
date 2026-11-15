@@ -416,13 +416,17 @@ table.data th.actions-col { width: 18%; }
 .main-parts-filter { display: inline-flex; align-items: center; gap: 6px; font-size: .9rem; }
 .main-parts-filter input { padding: 0; }
 .main-parts-search { flex: 1 1 220px; max-width: 360px; padding: 6px 8px; }
-.selection-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.selection-toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
 .selection-toolbar .btn { padding: 4px 10px; font-size: .85rem; }
 .selection-stars { display: inline-flex; align-items: center; gap: 6px; }
-.main-part-select-col { width: 32px; text-align: center; }
-.main-part-select-col input { cursor: pointer; }
-#main-parts tbody tr.selected { background: #eaf4fc; }
-#main-parts tbody tr.selected:hover { background: #d7ebfa; }
+.select-col { width: 32px; text-align: center; }
+.select-col input { cursor: pointer; }
+table.data tbody tr.row-selected { background: #eaf4fc; }
+table.data tbody tr.row-selected:hover { background: #d7ebfa; }
+table.data tbody tr.active-storage-row { background: #eef7e9; }
+table.data tbody tr.active-storage-row:hover { background: #e2f2d9; }
+table.data tbody tr.active-storage-row.row-selected { background: #d7ebfa; }
+table.data tbody tr.active-storage-row td:first-child { box-shadow: inset 3px 0 0 #2e7d32; }
 .main-part-image-col, .main-part-image, .part-image-col, .part-image { width: 64px; }
 .part-img { display: block; width: 56px; height: 56px; object-fit: contain; }
 .part-img[data-part-number] { cursor: pointer; border-radius: 4px; }

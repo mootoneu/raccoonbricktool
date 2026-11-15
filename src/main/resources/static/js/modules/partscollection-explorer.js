@@ -22,8 +22,7 @@
   let categorySearch = '';
   let categorySearchTotal = 0;
   let categorySearchTimer = null;
-  let visibleMainParts = [];
-  const selectedPartNumbers = new Set();
+  let mainPartsSelection = null;
   const mainPartsSort = { key: 'stars', dir: -1 };
 
   /**
@@ -234,10 +233,9 @@
    * @returns {jQuery} jQuery TD element
    */
   function selectionCell(part) {
-    const $cell = $('<td class="main-part-select-col"></td>');
-    $('<input type="checkbox" class="main-part-select">')
+    const $cell = $('<td class="select-col"></td>');
+    $('<input type="checkbox" class="part-select">')
       .attr('data-part-number', part.partNumber)
-      .prop('checked', selectedPartNumbers.has(String(part.partNumber)))
       .attr('aria-label', 'Select ' + (part.name || part.partNumber))
       .appendTo($cell);
     return $cell;
@@ -268,55 +266,13 @@
   // ============================================================================
 
   /**
-   * Clear the selected parts
+   * Enable or disable the explorer-only bulk actions.
+   * @param {string[]} ids - Selected part numbers
    */
-  function clearSelection() {
-    selectedPartNumbers.clear();
-    updateSelectionUi();
-  }
-
-  /**
-   * Add every visible part to the selection
-   */
-  function selectVisibleParts() {
-    visibleMainParts.forEach(function (part) {
-      selectedPartNumbers.add(String(part.partNumber));
-    });
-    updateSelectionUi();
-  }
-
-  /**
-   * Refresh the selection toolbar and the row/header checkboxes
-   */
-  function updateSelectionUi() {
-    const count = selectedPartNumbers.size;
-    let selectedVisible = 0;
-    visibleMainParts.forEach(function (part) {
-      if (selectedPartNumbers.has(String(part.partNumber))) {
-        selectedVisible++;
-      }
-    });
-
-    $('#main-parts-selection').prop('hidden', visibleMainParts.length === 0 && count === 0);
-    $('#main-parts-selected-count').text(
-      count === 1 ? '1 part selected' : count + ' parts selected');
-    $('#main-parts-clear-selection').prop('disabled', count === 0);
-    $('#main-parts-bulk-stars .star').prop('disabled', count === 0);
-    $('#main-parts-bulk-add').prop('disabled', count === 0);
-    $('#main-parts-select-all').prop('disabled', visibleMainParts.length === 0);
-
-    const $header = $('#main-parts-select-all-visible');
-    $header.prop('disabled', visibleMainParts.length === 0)
-      .prop('checked', visibleMainParts.length > 0 && selectedVisible === visibleMainParts.length)
-      .prop('indeterminate', selectedVisible > 0 && selectedVisible < visibleMainParts.length);
-
-    $('#main-parts tbody tr').each(function () {
-      const $row = $(this);
-      const number = String($row.attr('data-part-number'));
-      const selected = selectedPartNumbers.has(number);
-      $row.toggleClass('selected', selected);
-      $row.find('.main-part-select').prop('checked', selected);
-    });
+  function updateExplorerBulkActions(ids) {
+    const hasSelection = ids.length > 0;
+    $('#main-parts-bulk-stars .star').prop('disabled', !hasSelection);
+    $('#main-parts-bulk-add').prop('disabled', !hasSelection);
   }
 
   /**
@@ -324,7 +280,7 @@
    * @param {number} stars - The star rating (0-5)
    */
   function saveSelectedMainPartStars(stars) {
-    const numbers = Array.from(selectedPartNumbers);
+    const numbers = mainPartsSelection.getSelectedIds();
     if (numbers.length === 0) {
       return;
     }
@@ -348,7 +304,8 @@
         BrickTools.PartsCollectionShared.report('#part-explorer-msg', BrickTools.errorOf(xhr));
       })
       .always(function () {
-        updateSelectionUi();
+        mainPartsSelection.refresh();
+        updateExplorerBulkActions(mainPartsSelection.getSelectedIds());
       });
   }
 
@@ -381,15 +338,16 @@
         const added = result && typeof result.added === 'number' ? result.added : numbers.length;
         BrickTools.PartsCollectionShared.report('#part-explorer-msg',
           'Added ' + added + (added === 1 ? ' part' : ' parts') + ' to ' + label + '.');
-        if (selectedPartNumbers.size > 0) {
-          clearSelection();
+        if (mainPartsSelection.getSelectedIds().length > 0) {
+          mainPartsSelection.clear();
         }
       })
       .fail(function (xhr) {
         BrickTools.PartsCollectionShared.report('#part-explorer-msg', BrickTools.errorOf(xhr));
       })
       .always(function () {
-        updateSelectionUi();
+        mainPartsSelection.refresh();
+        updateExplorerBulkActions(mainPartsSelection.getSelectedIds());
       });
   }
 
@@ -451,16 +409,14 @@
     const $tbody = $('#main-parts tbody').empty();
     const $table = $('#main-parts');
     const query = mainPartsSearch.trim().toLowerCase();
-    visibleMainParts = [];
 
     $('#main-parts thead th.main-part-category-col').prop('hidden', !searching);
     $('#main-parts-search').attr('placeholder', searching ? 'Filter results' : 'Filter this category');
 
     if (searching && !searchText) {
       $table.prop('hidden', true);
-      $('#main-parts-selection').prop('hidden', true);
+      mainPartsSelection.setVisibleIds([]);
       $('#main-parts-count').text('');
-      updateSelectionUi();
       BrickTools.PartsCollectionShared.report('#part-explorer-msg',
         'Type a part number or name to search all categories.');
       return;
@@ -477,7 +433,6 @@
         || String(part.name || '').toLowerCase().includes(query);
     });
     const visible = BrickTools.PartsCollectionShared.sortRows(filtered, mainPartsSort);
-    visibleMainParts = visible;
     BrickTools.PartsCollectionShared.markSortedHeader('#main-parts', mainPartsSort);
 
     if (searching) {
@@ -495,8 +450,7 @@
     if (visible.length === 0) {
       $table.prop('hidden', true);
       // Keep the selection toolbar available when selected parts are hidden by the filters.
-      $('#main-parts-selection').prop('hidden', selectedPartNumbers.size === 0);
-      updateSelectionUi();
+      mainPartsSelection.setVisibleIds([]);
       let message;
       if (searching) {
         message = mainParts.length === 0
@@ -512,8 +466,7 @@
     }
 
     visible.forEach(function (part) {
-      const $row = $('<tr></tr>').attr('data-part-number', part.partNumber)
-        .toggleClass('selected', selectedPartNumbers.has(String(part.partNumber)));
+      const $row = $('<tr></tr>').attr('data-part-number', part.partNumber);
       $row.append(selectionCell(part));
       $row.append(partImageCell(part));
       $row.append($('<td></td>').text(part.partNumber || ''));
@@ -544,9 +497,10 @@
       $tbody.append($row);
     });
     $table.prop('hidden', false);
-    $('#main-parts-selection').prop('hidden', false);
+    mainPartsSelection.setVisibleIds(visible.map(function (part) {
+      return String(part.partNumber);
+    }));
     BrickTools.PartsCollectionShared.report('#part-explorer-msg', '');
-    updateSelectionUi();
     highlightPart(partToHighlight);
   }
 
@@ -607,7 +561,7 @@
         $group.prop('open', true);
       }
       if (selectedPartCategoryId !== id) {
-        clearSelection();
+        mainPartsSelection.clear();
       }
       selectedPartCategoryId = id;
       $('#part-category-tree .part-category-item').removeClass('active');
@@ -695,7 +649,7 @@
    * Select the fake Search category in the tree
    */
   function selectSearchCategory() {
-    clearSelection();
+    mainPartsSelection.clear();
     selectedPartCategoryId = SEARCH_CATEGORY_ID;
     loadPartCategories();
     if (!$('#part-category-tree .part-category-item').length) {
@@ -711,11 +665,25 @@
   function init() {
     starButtons(-1, $('#main-parts-bulk-stars'));
 
+    mainPartsSelection = BrickTools.SelectionControl.create({
+      table: '#main-parts',
+      toolbar: '#main-parts-selection',
+      rowIdAttr: 'data-part-number',
+      checkboxSelector: '.part-select',
+      headerCheckbox: '#main-parts-select-all-visible',
+      countLabel: '#main-parts-selected-count',
+      selectAllButton: '#main-parts-select-all',
+      clearButton: '#main-parts-clear-selection',
+      itemLabel: 'part',
+      itemLabelPlural: 'parts',
+      onChange: updateExplorerBulkActions
+    });
+
     // Category tree event handler
     $('#part-category-tree').on('click', '.part-category-item', function () {
       const categoryId = String($(this).attr('data-category-id'));
       if (categoryId !== selectedPartCategoryId) {
-        clearSelection();
+        mainPartsSelection.clear();
       }
       selectedPartCategoryId = categoryId;
       $('#part-category-tree .part-category-item').removeClass('active');
@@ -760,33 +728,7 @@
       renderMainParts();
     });
 
-    // Selection handlers
-    $('#main-parts').on('change', '.main-part-select', function () {
-      const partNumber = String($(this).attr('data-part-number') || '');
-      if (!partNumber) {
-        return;
-      }
-      if (this.checked) {
-        selectedPartNumbers.add(partNumber);
-      } else {
-        selectedPartNumbers.delete(partNumber);
-      }
-      updateSelectionUi();
-    });
-
-    $('#main-parts-select-all-visible').on('change', function () {
-      if (this.checked) {
-        selectVisibleParts();
-        return;
-      }
-      visibleMainParts.forEach(function (part) {
-        selectedPartNumbers.delete(String(part.partNumber));
-      });
-      updateSelectionUi();
-    });
-
-    $('#main-parts-select-all').on('click', selectVisibleParts);
-    $('#main-parts-clear-selection').on('click', clearSelection);
+    // Selection handlers are owned by BrickTools.SelectionControl.
 
     $('#main-parts-bulk-stars').on('click', '.star', function () {
       const stars = parseInt($(this).attr('data-stars'), 10);
@@ -796,7 +738,7 @@
     });
 
     $('#main-parts-bulk-add').on('click', function () {
-      addPartsToContainer(Array.from(selectedPartNumbers));
+      addPartsToContainer(mainPartsSelection.getSelectedIds());
     });
 
     $('#main-parts thead').on('click', 'th[data-key]', function () {
