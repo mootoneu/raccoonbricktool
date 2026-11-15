@@ -78,15 +78,18 @@ class PartStorageApiTest {
   void storagesAndCollectionRowsCanBeCreatedAndSearched() throws Exception {
     mvc.perform(post("/api/part-storage").contentType(MediaType.APPLICATION_JSON)
             .content("{\"id\":\"A\",\"model\":\"Cabinet\",\"drawersCount\":2,"
-                + "\"location\":\"Desk\",\"description\":\"Bricks\",\"order\":7}"))
+                + "\"location\":\"Desk\",\"description\":\"Bricks\",\"order\":7,"
+                + "\"labelSize\":\"50x20\"}"))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.id").value("A"))
         .andExpect(jsonPath("$.drawersCount").value(2))
+        .andExpect(jsonPath("$.labelSize").value("50x20"))
         .andExpect(jsonPath("$.order").value(7));
 
     mvc.perform(get("/api/part-storage"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$[0].id").value("A"));
+        .andExpect(jsonPath("$[0].id").value("A"))
+        .andExpect(jsonPath("$[0].labelSize").value("50x20"));
 
     mvc.perform(post("/api/part-collection").contentType(MediaType.APPLICATION_JSON)
             .content("{\"parts\":\"3001;§Bricks\",\"colors\":\"5;Any\",\"storageId\":\"A\","

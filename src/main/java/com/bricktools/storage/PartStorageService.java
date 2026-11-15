@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 
 /**
@@ -26,9 +28,12 @@ import org.springframework.stereotype.Service;
 public class PartStorageService {
 
   private static final List<String> STORAGE_HEADERS =
-      List.of("Id", "Model", "DrawersCount", "Location", "Description", "Order");
+      List.of("Id", "Model", "DrawersCount", "Location", "Description", "LabelSize", "Order");
   private static final List<String> COLLECTION_HEADERS =
       List.of("Parts", "Colors", "StorageId", "Drawer", "Amount");
+  private static final String DEFAULT_LABEL_SIZE = "60x10";
+  private static final Pattern LABEL_SIZE_PATTERN = Pattern.compile(
+      "(\\d+(?:[.,]\\d+)?)\\s*[x\\u00d7*]\\s*(\\d+(?:[.,]\\d+)?)");
   private static final int MATCH_LIMIT = 3000;
   private static final int DRAWER_MATCH_LIMIT = 200;
   private static final int MAX_DRAWERS = 52;
@@ -647,6 +652,10 @@ public class PartStorageService {
       if (clean(row.get("Order")).isEmpty()) {
         row.put("Order", "0");
       }
+      // Files written before the LabelSize column existed default to 60x10.
+      if (clean(row.get("LabelSize")).isEmpty()) {
+        row.put("LabelSize", DEFAULT_LABEL_SIZE);
+      }
     }
     return rows;
   }
@@ -728,8 +737,36 @@ public class PartStorageService {
     row.put("DrawersCount", String.valueOf(drawers));
     row.put("Location", clean(request == null ? null : request.location()));
     row.put("Description", clean(request == null ? null : request.description()));
+    row.put("LabelSize", normalizeLabelSize(request == null ? null : request.labelSize()));
     row.put("Order", String.valueOf(order));
     return row;
+  }
+
+  /**
+   * Normalizes a label size to the {@code <width>x<height>} format, in millimeters. A blank value
+   * keeps the default size.
+   */
+  private static String normalizeLabelSize(String value) {
+    String size = clean(value).toLowerCase(Locale.ROOT);
+    if (size.isEmpty()) {
+      return DEFAULT_LABEL_SIZE;
+    }
+    Matcher matcher = LABEL_SIZE_PATTERN.matcher(size);
+    if (!matcher.matches()) {
+      throw new IllegalArgumentException(
+          "Label size must use the <width>x<height> format in millimeters, for example "
+              + DEFAULT_LABEL_SIZE);
+    }
+    double width = Double.parseDouble(matcher.group(1).replace(',', '.'));
+    double height = Double.parseDouble(matcher.group(2).replace(',', '.'));
+    if (width <= 0 || height <= 0) {
+      throw new IllegalArgumentException("Label size must be greater than zero");
+    }
+    return normalizedDimension(matcher.group(1)) + "x" + normalizedDimension(matcher.group(2));
+  }
+
+  private static String normalizedDimension(String value) {
+    return value.replace(',', '.').replaceAll("\\.0+$", "");
   }
 
   private Map<String, String> toCollectionRow(PartCollectionRequest request) throws IOException {
@@ -784,8 +821,14 @@ public class PartStorageService {
     entry.put("drawersCount", toInt(row.get("DrawersCount")));
     entry.put("location", clean(row.get("Location")));
     entry.put("description", clean(row.get("Description")));
+    entry.put("labelSize", defaultLabelSize(row.get("LabelSize")));
     entry.put("order", orderOf(row));
     return entry;
+  }
+
+  private static String defaultLabelSize(String value) {
+    String size = clean(value);
+    return size.isEmpty() ? DEFAULT_LABEL_SIZE : size;
   }
 
   private static Map<String, Object> collectionEntry(int index, Map<String, String> row) {

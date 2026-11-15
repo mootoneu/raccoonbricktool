@@ -67,10 +67,11 @@ class PartStorageServiceTest {
         .containsEntry("drawersCount", 6)
         .containsEntry("location", "Desk")
         .containsEntry("description", "Bricks")
+        .containsEntry("labelSize", "60x10")
         .containsEntry("order", 2);
     assertThat(Files.readString(dir.resolve("bt/part_storage.csv")))
-        .startsWith("Id,Model,DrawersCount,Location,Description,Order")
-        .contains("A,IKEA Alex,6,Desk,Bricks,2");
+        .startsWith("Id,Model,DrawersCount,Location,Description,LabelSize,Order")
+        .contains("A,IKEA Alex,6,Desk,Bricks,60x10,2");
     assertThat(service.storages()).hasSize(1);
   }
 
@@ -86,7 +87,30 @@ class PartStorageServiceTest {
         .containsEntry("drawersCount", 4)
         .containsEntry("location", "Attic")
         .containsEntry("description", "Plates")
+        .containsEntry("labelSize", "60x10")
         .containsEntry("order", 3);
+  }
+
+  @Test
+  void labelSizeIsStoredInMillimeters() throws IOException {
+    service.createStorage(
+        new PartStorageRequest("A", "Box", 0, "", "", 0, " 50 x 25 "));
+
+    assertThat(service.storages().get(0)).containsEntry("labelSize", "50x25");
+
+    service.updateStorage("A",
+        new PartStorageRequest("A", "Box", 0, "", "", 0, "40×20.5"));
+
+    assertThat(service.storages().get(0)).containsEntry("labelSize", "40x20.5");
+
+    assertThatThrownBy(() -> service.createStorage(
+        new PartStorageRequest("B", "Box", 0, "", "", 0, "wide")))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("width>x<height");
+    assertThatThrownBy(() -> service.createStorage(
+        new PartStorageRequest("C", "Box", 0, "", "", 0, "0x10")))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("greater than zero");
   }
 
   @Test
@@ -110,8 +134,8 @@ class PartStorageServiceTest {
     service.updateStorage("A", new PartStorageRequest("A", "Cabinet", 2, "", "", null));
 
     assertThat(Files.readString(dir.resolve("bt/part_storage.csv")))
-        .startsWith("Id,Model,DrawersCount,Location,Description,Order")
-        .contains("A,Cabinet,2,,,0");
+        .startsWith("Id,Model,DrawersCount,Location,Description,LabelSize,Order")
+        .contains("A,Cabinet,2,,,60x10,0");
   }
 
   @Test
