@@ -128,10 +128,13 @@ Actions:
 - **View** (eye icon) opens the **Storage drawers** tab filtered to the storage.
 - **Edit** (pencil icon) opens the storage form.
 - **Set active** (check icon) makes the storage the active container.
+- **Export Labels** (download icon) opens a new window with a printable A4 sheet for the selected storages. Allow pop-ups for the page the first time.
+
+The label sheet contains one label per drawer of every selected storage, including empty drawers, in storage order. Each label is rendered at the exact `LabelSize` of its storage (in millimeters) and is split into three columns of `30%` (image of the first part of the drawer content rules, when available), `50%` (every drawer content rule as text: parts, colors and amount), and `20%` (storage id and drawer label). Labels wrap on A4 pages and have a dashed cutting outline. The window has **Print** and **Close** buttons; the toolbar is hidden when printing.
 
 The checkbox column selects individual storages. The selection toolbar above the table shows the selected count and provides **Select all visible** and **Clear selection**. Select-all only adds the storages currently visible after filtering and sorting, hidden selections are preserved, and the header checkbox is indeterminate when only some visible storages are selected. The selection is independent from the one in the Part explorer. The active storage row is highlighted separately from the selection. There are no bulk storage actions yet because the API only supports listing, creating and updating storages.
 
-The **Add storage** button opens the same form for a new storage. The form asks for the id, order, model, drawer count, location, and description. The id cannot be changed after creation. The drawer count is between `0` and `52`; drawers are named `a`–`z` for the first 26 and `A`–`Z` for the next 26. A storage with a drawer count of `0` has no drawers and can only be used as a whole container.
+The **Add storage** button opens the same form for a new storage. The form asks for the id, order, model, drawer count, location, description, and label size. The id cannot be changed after creation. The drawer count is between `0` and `52`; drawers are named `a`–`z` for the first 26 and `A`–`Z` for the next 26. A storage with a drawer count of `0` has no drawers and can only be used as a whole container. The label size is the printable drawer label dimension in millimeters, in the `<width>x<height>` format (for example `60x10`); it defaults to `60x10` and is used by **Export Labels**.
 
 **Endpoints:**
 

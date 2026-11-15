@@ -948,7 +948,7 @@ public class ApiController {
   @PutMapping(path = "/part-storage/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
   @Operation(
       summary = "Update part storage",
-      description = "Updates the order, model, drawer count, location, and description of a part storage."
+      description = "Updates the order, model, drawer count, location, description, and label size of a part storage."
   )
   public Map<String, Object> updatePartStorage(@PathVariable String id,
                                                @RequestBody PartStorageRequest request)

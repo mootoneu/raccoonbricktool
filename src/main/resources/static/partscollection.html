@@ -135,6 +135,8 @@
     <section data-panel="storage" hidden>
       <div class="storage-toolbar">
         <button type="button" id="storage-add" class="btn" data-icon="add">Add storage</button>
+        <button type="button" id="storage-export-labels" class="btn secondary"
+                data-icon="download">Export Labels</button>
         <input type="search" id="storage-filter" placeholder="Filter storages"
                aria-label="Filter storages">
         <span id="storage-count" class="muted"></span>
@@ -325,6 +327,10 @@
       <label>Description
         <input id="storage-description" placeholder="What this storage is supposed to contain">
       </label>
+      <label>Label size (mm)
+        <input id="storage-label-size" placeholder="60x10" pattern="\d+(?:[.,]\d+)?\s*[x×*]\s*\d+(?:[.,]\d+)?">
+      </label>
+      <p class="muted">Printable label dimension in millimeters, in the <code>&lt;width&gt;x&lt;height&gt;</code> format. Defaults to <code>60x10</code>.</p>
       <p id="storage-form-msg" class="warning"></p>
       <div class="form-actions">
         <button type="button" id="storage-cancel" class="btn secondary" data-icon="close">Cancel</button>
