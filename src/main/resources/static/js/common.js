@@ -374,7 +374,7 @@
 
     $('#app-header').html(
       '<a class="brand" href="index.html?home=1">' +
-      '<span class="brand-mark" aria-hidden="true"></span>Brick Tools</a>' +
+      '<img class="brand-mark" src="img/raccoon_lego_icon_64x64.png" alt="" width="32" aria-hidden="true">RaccoonBrick Tools</a>' +
       '<nav>' + links + '</nav>' +
       '<div class="active-container" id="active-container"></div>' +
       '<div class="notifications">' +

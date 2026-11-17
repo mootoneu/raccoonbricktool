@@ -1,11 +1,16 @@
-# Brick Tools
+<div align="center">
+
+# Raccoon Brick Tools
+
+<img src="src/main/resources/static/img/raccoon_lego_icon_1254x1254.png" alt="Raccoon Brick Tools icon, that is a raccoon holding a yellow 2x2 brick" width="400" />
 
 Brick Tools is a personal web application that provides several tools to help manage a LEGO collection. It is designed to be single-user and self-hosted.
 
-## AI transparency
+</div>
 
-I'm making this project to explore creating an application with several AI agents. For this, the project regroups the collection of tools and sheets I've developed in the past years into a single application.
-The building process is to define the data model (as most CSV files already exist), write the requirements, and ask an AI agent to write the code. The code is then manually verified and the results are tested.
+>[!IMPORTANT]
+>This project is built with the help of AI agents. This project is an excuse to explore creating an application while testing and comparing several AI agents. For this, the project regroups the collection of tools and excel/sheets files I've developed in the past years into a single application.
+>The building process is to define the data model (as most CSV files already exist), write the requirements, and ask one or more AI agents to write the code. The code is then manually verified and compared.
 
 ## Application Stack
 
@@ -15,8 +20,7 @@ The building process is to define the data model (as most CSV files already exis
 
 ## Table of Contents
 
-- [Brick Tools](#brick-tools)
-  - [AI transparency](#ai-transparency)
+- [Raccoon Brick Tools](#raccoon-brick-tools)
   - [Application Stack](#application-stack)
   - [Table of Contents](#table-of-contents)
   - [Application Features](#application-features)
