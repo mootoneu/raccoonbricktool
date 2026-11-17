@@ -472,7 +472,10 @@
       .attr('title', 'Fetch official price')
       .attr('aria-label', 'Fetch official price')
       .html(window.BrickTools.icon('sync'))
-      .on('click', function () { openPriceSources(setNumber, onFetched); });
+      .on('click', function (e) {
+        e.stopPropagation();
+        openPriceSources(setNumber, onFetched);
+      });
   }
 
   window.BrickSets = {

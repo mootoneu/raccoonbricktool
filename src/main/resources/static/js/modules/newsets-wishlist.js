@@ -18,7 +18,7 @@
       .done(function(entries) {
         BrickTools.NewSetsShared.setWishlist(entries || []);
         BrickTools.NewSetsCatalogue.indexWishlist();
-        BrickTools.NewSetsShared.renderThemeFilters();
+        BrickTools.NewSetsCatalogue.renderThemeFilters();
         BrickTools.NewSetsCatalogue.renderSets(true);
         renderWishlistFilterOptions();
         renderWishlist();
