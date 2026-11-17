@@ -1,15 +1,15 @@
 @echo off
-title BrickTool - server
+title Raccoon BrickTool - server
 setlocal
 
 cd /d "%~dp0"
 
-echo Starting BrickTool...
+echo Starting Raccoon BrickTool...
 echo Open http://localhost:8780 once the server is ready.
 echo Press Ctrl+C to stop the server.
 echo.
 
-call java -jar .\target\bricktools-0.1.0.jar
+call java -jar .\target\bricktools-1.0.0.jar
 set "EXIT_CODE=%ERRORLEVEL%"
 
 echo.
