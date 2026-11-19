@@ -152,7 +152,7 @@ public class WishlistService {
     }
     String member = clean(request == null ? null : request.member());
     if (member.isEmpty()) {
-      throw new IllegalArgumentException("Member is required");
+      member = "Other";
     }
     String priority = priority(request == null ? null : request.priority());
     String buyer = clean(request == null ? null : request.buyer());
