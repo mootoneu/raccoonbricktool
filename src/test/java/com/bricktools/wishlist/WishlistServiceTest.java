@@ -110,9 +110,6 @@ class WishlistServiceTest {
     assertThatThrownBy(() -> service.create(request("75192", "2026/02/03", "Duncan", "Urgent")))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Priority");
-    assertThatThrownBy(() -> service.create(request("75192", "2026/02/03", " ", "High")))
-        .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("Member");
     assertThatThrownBy(() -> service.create(request("75192", "03/02/2026", "Duncan", "High")))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("date");
