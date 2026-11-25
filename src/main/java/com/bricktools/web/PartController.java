@@ -5,6 +5,7 @@ import com.bricktools.part.MainPartStarsRequest;
 import com.bricktools.part.PartDefaultColorRequest;
 import com.bricktools.part.PartImageService;
 import com.bricktools.part.PartService;
+import com.bricktools.web.dto.PartView;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -140,7 +141,7 @@ public class PartController {
   )
   @ApiResponse(responseCode = "200", description = "Part information returned")
   @ApiResponse(responseCode = "404", description = "Part not found")
-  public ResponseEntity<Map<String, Object>> partInfo(
+  public ResponseEntity<PartView> partInfo(
       @Parameter(name = "partNumber", description = "Lego part number") @PathVariable String partNumber)
       throws IOException {
     Map<String, Object> info = partService.info(partNumber);
@@ -150,7 +151,7 @@ public class PartController {
     int defaultColor = partImages.defaultColor(partNumber);
     info.put("defaultColorId", defaultColor < 0 ? null : defaultColor);
     info.put("colors", partImages.colorsForPart(partNumber));
-    return ResponseEntity.ok(info);
+    return ResponseEntity.ok(PartView.from(info));
   }
 
   @PutMapping(path = "/parts/{partNumber}/default-color")

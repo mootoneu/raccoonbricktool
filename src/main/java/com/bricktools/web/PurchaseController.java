@@ -4,6 +4,7 @@ import com.bricktools.purchase.PurchaseRequest;
 import com.bricktools.purchase.PurchaseService;
 import com.bricktools.purchase.SetInventoryRequest;
 import com.bricktools.purchase.SetInventoryService;
+import com.bricktools.web.dto.PurchaseView;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -49,8 +50,8 @@ public class PurchaseController {
       summary = "List Purchases",
       description = "Returns all set purchases recorded in the database."
   )
-  public List<Map<String, Object>> purchases() throws IOException {
-    return purchases.list();
+  public List<PurchaseView> purchases() throws IOException {
+    return PurchaseView.from(purchases.list());
   }
 
   /**

@@ -5,6 +5,8 @@ import com.bricktools.storage.ContainerService;
 import com.bricktools.storage.PartCollectionRequest;
 import com.bricktools.storage.PartStorageRequest;
 import com.bricktools.storage.PartStorageService;
+import com.bricktools.web.dto.CollectionRuleView;
+import com.bricktools.web.dto.StorageView;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -52,8 +54,8 @@ public class PartStorageController {
       description = "Returns every physical part storage stored in data/bt/part_storage.csv, "
           + "sorted by Order and then Id."
   )
-  public List<Map<String, Object>> partStorages() throws IOException {
-    return partStorages.storages();
+  public List<StorageView> partStorages() throws IOException {
+    return StorageView.from(partStorages.storages());
   }
 
   @PostMapping(path = "/part-storage", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -83,8 +85,8 @@ public class PartStorageController {
       summary = "List part collection rows",
       description = "Returns every rule of data/bt/part_collection.csv with its file index."
   )
-  public List<Map<String, Object>> partCollection() throws IOException {
-    return partStorages.collectionRows();
+  public List<CollectionRuleView> partCollection() throws IOException {
+    return CollectionRuleView.from(partStorages.collectionRows());
   }
 
   @PostMapping(path = "/part-collection", produces = MediaType.APPLICATION_JSON_VALUE)
