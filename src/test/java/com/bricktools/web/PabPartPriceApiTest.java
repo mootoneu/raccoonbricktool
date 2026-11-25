@@ -1,6 +1,7 @@
 package com.bricktools.web;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -63,5 +64,15 @@ class PabPartPriceApiTest {
   void unknownDesignIdReturnsNotFound() throws Exception {
     mvc.perform(get("/api/le/pab-part-prices/9999"))
         .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void crossOriginRequestsAreNotAllowed() throws Exception {
+    mvc.perform(get("/api/le/pab-part-prices").header("Origin", "https://example.com"))
+        .andExpect(status().isOk())
+        .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+    mvc.perform(get("/api/le/pab-part-prices/18980").header("Origin", "https://example.com"))
+        .andExpect(status().isOk())
+        .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
   }
 }

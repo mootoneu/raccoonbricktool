@@ -47,7 +47,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -696,7 +695,6 @@ public class ApiController {
     pab.updatePart(id, request);
   }
 
-  @CrossOrigin(origins = "*")
   @GetMapping(path = "/le/pab-part-prices", produces = MediaType.APPLICATION_JSON_VALUE)
   @Operation(
       summary = "List PaB part prices",
@@ -706,7 +704,6 @@ public class ApiController {
     return pabPartPrices.prices();
   }
 
-  @CrossOrigin(origins = "*")
   @GetMapping(path = "/le/pab-part-prices/{designId}", produces = MediaType.APPLICATION_JSON_VALUE)
   @Operation(
       summary = "Get PaB part price per colorIds by design ID",
