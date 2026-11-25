@@ -82,7 +82,7 @@ public final class CollectionChips {
         chip.put("keyword", false);
       } else {
         chip.put("id", null);
-        chip.put("name", PartStorageService.canonicalKeyword(token));
+        chip.put("name", CollectionRuleService.canonicalKeyword(token));
         chip.put("rgb", "");
         chip.put("keyword", true);
       }

@@ -53,7 +53,11 @@ class PartStorageServiceTest {
         "PartNumber,Name,Size,CategoryId,Material,HasAlternates,Stars\n"
             + "3001,Brick 2 x 4,2x4x1,11,Plastic,false,2\n"
             + "3003,Plate 1 x 2,1x2x1/3,12,Plastic,false,2\n");
-    service = new PartStorageService(props());
+    PartCatalogService catalog = new PartCatalogService(props());
+    StorageService storage = new StorageService(props());
+    CollectionRuleService rules = new CollectionRuleService(props(), storage, catalog);
+    DrawerService drawer = new DrawerService(storage, rules, catalog);
+    service = new PartStorageService(storage, rules, drawer, catalog);
   }
 
   @Test
