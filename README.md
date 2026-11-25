@@ -157,6 +157,8 @@ Never place a `.env` file under `src/main/resources`: Maven copies that director
 - Run the application: `mvn spring-boot:run`
 - Check a JavaScript file: `node --check path/to/file.js`
 
+The backend keeps slow work (downloads, network scraping, throttling sleeps) outside service-wide locks: `RebrickableService.status()` stays responsive during an update, `BrickWatchService` reserves throttle slots without sleeping under a lock, and `SetImageService` uses per-set download locks. Keep that property when changing those services.
+
 The frontend is plain JavaScript served from `src/main/resources/static`. There is no build step for the static assets; restart or repackage the application after changing them.
 
 ## Contributing

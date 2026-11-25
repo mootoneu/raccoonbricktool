@@ -12,7 +12,13 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -158,6 +164,46 @@ class BrickWatchServiceTest {
   void rejectsInvalidSetNumbers() {
     assertThatThrownBy(() -> service(0).price("../etc/passwd"))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void cachedLookupIsNotBlockedByRunningScrape() throws Exception {
+    CountDownLatch scrapeStarted = new CountDownLatch(1);
+    CountDownLatch release = new CountDownLatch(1);
+    byte[] body = PAGE.getBytes(StandardCharsets.UTF_8);
+    server.handle("/fr-FR/set/1001", exchange -> {
+      scrapeStarted.countDown();
+      try {
+        release.await(5, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+      exchange.getResponseHeaders().add("Content-Type", "text/html; charset=UTF-8");
+      exchange.sendResponseHeaders(200, body.length);
+      try (OutputStream out = exchange.getResponseBody()) {
+        out.write(body);
+      }
+    });
+    Csv.write(dir.resolve("bw/setprices.csv"), List.of("SetNumber", "LegoPrice"),
+        List.of(Map.of("SetNumber", "1002", "LegoPrice", "12.50")));
+    BrickWatchService service = service(0);
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    try {
+      Future<Map<String, Object>> scrape = executor.submit(() -> service.price("1001"));
+      assertThat(scrapeStarted.await(5, TimeUnit.SECONDS)).isTrue();
+
+      long start = System.nanoTime();
+      Map<String, Object> cached = service.price("1002");
+      long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+
+      assertThat(elapsedMs).isLessThan(500);
+      assertThat(cached).containsEntry("source", "stored");
+      release.countDown();
+      assertThat(scrape.get(5, TimeUnit.SECONDS)).containsEntry("source", "brickwatch");
+    } finally {
+      release.countDown();
+      executor.shutdownNow();
+    }
   }
 
   @Test

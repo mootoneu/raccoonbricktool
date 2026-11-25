@@ -28,14 +28,16 @@ public class BrickWatchService {
 
   private final BrickToolsProperties props;
   private final Path pricesFile;
-  private long lastRequestAt;
+  private final Object throttleLock = new Object();
+  private final Object writeLock = new Object();
+  private long nextRequestAt;
 
   public BrickWatchService(BrickToolsProperties props) {
     this.props = props;
     this.pricesFile = props.dataPath().resolve("bw/setprices.csv");
   }
 
-  public synchronized Map<String, Object> price(String setNumber) throws IOException, InterruptedException {
+  public Map<String, Object> price(String setNumber) throws IOException, InterruptedException {
     String key = setNumber == null ? "" : setNumber.trim();
     if (!key.matches("[A-Za-z0-9-]+")) {
       throw new IllegalArgumentException("Invalid set number: " + setNumber);
@@ -52,12 +54,14 @@ public class BrickWatchService {
       throw new IllegalStateException("No official price found on BrickWatch for set " + key);
     }
 
-    List<Map<String, String>> rows = new ArrayList<>(Csv.read(pricesFile));
-    Map<String, String> row = new LinkedHashMap<>();
-    row.put("SetNumber", key);
-    row.put("LegoPrice", price.toPlainString());
-    rows.add(row);
-    Csv.write(pricesFile, HEADERS, rows);
+    synchronized (writeLock) {
+      List<Map<String, String>> rows = new ArrayList<>(Csv.read(pricesFile));
+      Map<String, String> row = new LinkedHashMap<>();
+      row.put("SetNumber", key);
+      row.put("LegoPrice", price.toPlainString());
+      rows.add(row);
+      Csv.write(pricesFile, HEADERS, rows);
+    }
 
     return Map.of("setNumber", key, "legoPrice", price, "source", "brickwatch");
   }
@@ -99,12 +103,22 @@ public class BrickWatchService {
     return doc;
   }
 
+  /** Reserves a start time for the next request, then sleeps outside the lock. */
   private void throttle() throws InterruptedException {
-    long wait = props.brickwatch().minDelayMs() - (System.currentTimeMillis() - lastRequestAt);
+    long slot = reserveRequestSlot();
+    long wait = slot - System.currentTimeMillis();
     if (wait > 0) {
       Thread.sleep(wait);
     }
-    lastRequestAt = System.currentTimeMillis();
+  }
+
+  private long reserveRequestSlot() {
+    synchronized (throttleLock) {
+      long now = System.currentTimeMillis();
+      long slot = Math.max(now, nextRequestAt);
+      nextRequestAt = slot + props.brickwatch().minDelayMs();
+      return slot;
+    }
   }
 
   static BigDecimal parsePrice(String text) {

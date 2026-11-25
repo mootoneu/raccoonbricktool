@@ -17,6 +17,7 @@ import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import org.slf4j.Logger;
@@ -38,6 +39,8 @@ public class RebrickableService {
   private final HttpClient http = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();
   private final Path stateFile;
   private final Path dataDir;
+  private final AtomicBoolean updating = new AtomicBoolean();
+  private final Object stateLock = new Object();
 
   public RebrickableService(BrickToolsProperties props, NotificationService notifications) {
     this.props = props;
@@ -46,7 +49,8 @@ public class RebrickableService {
     this.dataDir = props.dataPath().resolve("re");
   }
 
-  public synchronized Map<String, Object> status() throws IOException {
+  /** Reads only the small state file, so polling stays responsive while an update is downloading. */
+  public Map<String, Object> status() throws IOException {
     LocalDate last = lastDownload();
     Map<String, Object> status = new LinkedHashMap<>();
     status.put("lastDownload", last == null ? null : last.toString());
@@ -55,30 +59,42 @@ public class RebrickableService {
     return status;
   }
 
-  public synchronized LocalDate update() throws IOException, InterruptedException {
-    LocalDate today = LocalDate.now();
-    if (today.equals(lastDownload())) {
-      throw new IllegalStateException("Rebrickable data has already been downloaded today");
+  /**
+   * Downloads and extracts the archive. Only a short flag guards against concurrent updates: the network and file work
+   * is deliberately performed without holding a service-wide lock so that {@link #status()} and
+   * {@link #checkStaleness()} are never blocked by a slow download.
+   */
+  public LocalDate update() throws IOException, InterruptedException {
+    if (!updating.compareAndSet(false, true)) {
+      throw new IllegalStateException("A Rebrickable update is already running");
     }
-    Path zip = Files.createTempFile("rebrickable", ".zip");
     try {
-      HttpRequest request = HttpRequest.newBuilder(URI.create(props.rebrickable().downloadUrl())).build();
-      HttpResponse<Path> response = http.send(request, HttpResponse.BodyHandlers.ofFile(zip));
-      if (response.statusCode() != 200) {
-        throw new IOException("Rebrickable download failed with HTTP " + response.statusCode());
+      LocalDate today = LocalDate.now();
+      if (today.equals(lastDownload())) {
+        throw new IllegalStateException("Rebrickable data has already been downloaded today");
       }
-      extract(zip);
+      Path zip = Files.createTempFile("rebrickable", ".zip");
+      try {
+        HttpRequest request = HttpRequest.newBuilder(URI.create(props.rebrickable().downloadUrl())).build();
+        HttpResponse<Path> response = http.send(request, HttpResponse.BodyHandlers.ofFile(zip));
+        if (response.statusCode() != 200) {
+          throw new IOException("Rebrickable download failed with HTTP " + response.statusCode());
+        }
+        extract(zip);
+      } finally {
+        Files.deleteIfExists(zip);
+      }
+      setLastDownload(today);
+      checkStaleness();
+      return today;
     } finally {
-      Files.deleteIfExists(zip);
+      updating.set(false);
     }
-    setLastDownload(today);
-    checkStaleness();
-    return today;
   }
 
   @EventListener(ApplicationReadyEvent.class)
   @Scheduled(cron = "0 0 9 * * *")
-  public synchronized void checkStaleness() {
+  public void checkStaleness() {
     try {
       if (isStale(lastDownload())) {
         notifications.raise(STALE_NOTIFICATION,
@@ -113,16 +129,20 @@ public class RebrickableService {
   }
 
   private LocalDate lastDownload() throws IOException {
-    String value = loadState().getProperty(LAST_DOWNLOAD);
-    return value == null ? null : LocalDate.parse(value);
+    synchronized (stateLock) {
+      String value = loadState().getProperty(LAST_DOWNLOAD);
+      return value == null ? null : LocalDate.parse(value);
+    }
   }
 
   private void setLastDownload(LocalDate date) throws IOException {
-    Properties state = loadState();
-    state.setProperty(LAST_DOWNLOAD, date.toString());
-    Files.createDirectories(stateFile.toAbsolutePath().getParent());
-    try (Writer writer = Files.newBufferedWriter(stateFile, StandardCharsets.UTF_8)) {
-      state.store(writer, "Brick Tools state");
+    synchronized (stateLock) {
+      Properties state = loadState();
+      state.setProperty(LAST_DOWNLOAD, date.toString());
+      Files.createDirectories(stateFile.toAbsolutePath().getParent());
+      try (Writer writer = Files.newBufferedWriter(stateFile, StandardCharsets.UTF_8)) {
+        state.store(writer, "Brick Tools state");
+      }
     }
   }
 

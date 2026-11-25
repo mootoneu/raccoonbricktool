@@ -7,10 +7,16 @@ import com.bricktools.config.BrickToolsProperties;
 import com.bricktools.notification.NotificationService;
 import com.bricktools.support.TestHttpServer;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -43,6 +49,23 @@ class RebrickableServiceTest {
         new BrickToolsProperties.Rebrickable(server.baseUrl() + "/rebrickable.zip"),
         new BrickToolsProperties.BrickWatch("", 0),
         new BrickToolsProperties.BrickOwl("", "")), notifications);
+  }
+
+  private void holdDownload(CountDownLatch started, CountDownLatch release) throws IOException {
+    byte[] zip = TestHttpServer.zip(Map.of("sets.csv", "set_num,name\n1-1,Test\n"));
+    server.handle("/rebrickable.zip", exchange -> {
+      started.countDown();
+      try {
+        release.await(5, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+      exchange.getResponseHeaders().add("Content-Type", "application/zip");
+      exchange.sendResponseHeaders(200, zip.length);
+      try (OutputStream out = exchange.getResponseBody()) {
+        out.write(zip);
+      }
+    });
   }
 
   private void writeState(LocalDate lastDownload) throws IOException {
@@ -131,6 +154,55 @@ class RebrickableServiceTest {
     assertThatThrownBy(service::update)
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("already been downloaded today");
+  }
+
+  @Test
+  void statusIsNotBlockedWhileAnUpdateDownloads() throws Exception {
+    CountDownLatch started = new CountDownLatch(1);
+    CountDownLatch release = new CountDownLatch(1);
+    holdDownload(started, release);
+    RebrickableService service = service();
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    try {
+      Future<LocalDate> update = executor.submit(service::update);
+      assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();
+
+      long start = System.nanoTime();
+      Map<String, Object> status = service.status();
+      long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+
+      assertThat(elapsedMs).isLessThan(500);
+      assertThat(status).containsEntry("canUpdate", true);
+      release.countDown();
+      assertThat(update.get(5, TimeUnit.SECONDS)).isEqualTo(LocalDate.now());
+    } finally {
+      release.countDown();
+      executor.shutdownNow();
+    }
+  }
+
+  @Test
+  void concurrentUpdateIsRejected() throws Exception {
+    CountDownLatch started = new CountDownLatch(1);
+    CountDownLatch release = new CountDownLatch(1);
+    holdDownload(started, release);
+    RebrickableService service = service();
+    ExecutorService executor = Executors.newFixedThreadPool(2);
+    try {
+      Future<LocalDate> first = executor.submit(service::update);
+      assertThat(started.await(5, TimeUnit.SECONDS)).isTrue();
+      Future<LocalDate> second = executor.submit(service::update);
+
+      assertThatThrownBy(() -> second.get(5, TimeUnit.SECONDS))
+          .hasRootCauseInstanceOf(IllegalStateException.class)
+          .hasRootCauseMessage("A Rebrickable update is already running");
+
+      release.countDown();
+      first.get(5, TimeUnit.SECONDS);
+    } finally {
+      release.countDown();
+      executor.shutdownNow();
+    }
   }
 
   @Test

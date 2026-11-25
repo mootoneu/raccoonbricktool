@@ -21,10 +21,13 @@ class ApiExceptionHandlerTest {
   private final ApiExceptionHandler handler = new ApiExceptionHandler();
   private ListAppender<ILoggingEvent> appender;
   private Logger logger;
+  private boolean additive;
 
   @BeforeEach
   void attachAppender() {
     logger = (Logger) LoggerFactory.getLogger(ApiExceptionHandler.class);
+    additive = logger.isAdditive();
+    logger.setAdditive(false);
     appender = new ListAppender<>();
     appender.start();
     logger.addAppender(appender);
@@ -34,6 +37,7 @@ class ApiExceptionHandlerTest {
   void detachAppender() {
     logger.detachAppender(appender);
     appender.stop();
+    logger.setAdditive(additive);
   }
 
   @Test

@@ -9,7 +9,13 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -111,6 +117,52 @@ class SetImageServiceTest {
 
     service().ensure("75192");
     assertThat(service().available()).containsExactly("75192");
+  }
+
+  @Test
+  void findIsNotBlockedWhileAnotherSetDownloads() throws Exception {
+    CountDownLatch downloadStarted = new CountDownLatch(1);
+    CountDownLatch release = new CountDownLatch(1);
+    server.handle("/sets/60000-1.jpg", exchange -> {
+      downloadStarted.countDown();
+      try {
+        release.await(5, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      }
+      send(exchange, 200, JPEG);
+    });
+    Files.writeString(dir.resolve("re/sets.csv"),
+        "\n60000-1,Slow,2020,1,10," + server.baseUrl() + "/sets/60000-1.jpg\n",
+        StandardOpenOption.APPEND);
+    Files.createDirectories(dir.resolve("bt/setsimg"));
+    Path stored = dir.resolve("bt/setsimg/77777.jpg");
+    Files.write(stored, JPEG);
+
+    SetImageService service = service();
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    try {
+      Future<?> download = executor.submit(() -> {
+        try {
+          service.ensure("60000");
+        } catch (Exception e) {
+          throw new IllegalStateException(e);
+        }
+      });
+      assertThat(downloadStarted.await(5, TimeUnit.SECONDS)).isTrue();
+
+      long start = System.nanoTime();
+      Optional<Path> found = service.find("77777");
+      long elapsedMs = (System.nanoTime() - start) / 1_000_000;
+
+      assertThat(elapsedMs).isLessThan(500);
+      assertThat(found).contains(stored);
+      release.countDown();
+      download.get(5, TimeUnit.SECONDS);
+    } finally {
+      release.countDown();
+      executor.shutdownNow();
+    }
   }
 
   @Test

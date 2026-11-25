@@ -15,6 +15,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.springframework.core.io.FileSystemResource;
@@ -35,13 +37,14 @@ public class SetImageService {
   private final Path imagesDir;
   private final Path setsFile;
   private final HttpClient http = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build();
+  private final ConcurrentMap<String, Object> downloadLocks = new ConcurrentHashMap<>();
 
   public SetImageService(BrickToolsProperties props) {
     this.imagesDir = props.dataPath().resolve("bt/setsimg");
     this.setsFile = props.dataPath().resolve("re/sets.csv");
   }
 
-  public synchronized Optional<Path> find(String setNumber) throws IOException {
+  public Optional<Path> find(String setNumber) throws IOException {
     if (setNumber == null || !SET_NUMBER.matcher(setNumber).matches() || !Files.isDirectory(imagesDir)) {
       return Optional.empty();
     }
@@ -50,7 +53,7 @@ public class SetImageService {
     }
   }
 
-  public synchronized Set<String> available() throws IOException {
+  public Set<String> available() throws IOException {
     Set<String> numbers = new HashSet<>();
     if (Files.isDirectory(imagesDir)) {
       try (Stream<Path> files = Files.list(imagesDir)) {
@@ -60,11 +63,15 @@ public class SetImageService {
     return numbers;
   }
 
-  public synchronized boolean hasImageUrl(String setNumber) throws IOException {
+  public boolean hasImageUrl(String setNumber) throws IOException {
     return imageUrl(setNumber).isPresent();
   }
 
-  public synchronized Optional<Path> ensure(String setNumber) throws IOException, InterruptedException {
+  /**
+   * Downloads an image when needed. The lock is per set, so a slow download never stalls lookups for other sets, and a
+   * second caller for the same set waits and then reuses the downloaded file instead of downloading it twice.
+   */
+  public Optional<Path> ensure(String setNumber) throws IOException, InterruptedException {
     if (setNumber == null || !SET_NUMBER.matcher(setNumber).matches()) {
       throw new IllegalArgumentException("Invalid set number: " + setNumber);
     }
@@ -72,25 +79,31 @@ public class SetImageService {
     if (existing.isPresent()) {
       return existing;
     }
-    Optional<String> url = imageUrl(setNumber);
-    if (url.isEmpty()) {
-      return Optional.empty();
-    }
-
-    Path target = imagesDir.resolve(setNumber + "." + extensionOf(url.get()));
-    Path partial = imagesDir.resolve(setNumber + ".part");
-    Files.createDirectories(imagesDir);
-    try {
-      HttpRequest request = HttpRequest.newBuilder(URI.create(url.get())).build();
-      HttpResponse<Path> response = http.send(request, HttpResponse.BodyHandlers.ofFile(partial));
-      if (response.statusCode() != 200) {
-        throw new IOException("Set image download failed with HTTP " + response.statusCode());
+    synchronized (downloadLocks.computeIfAbsent(setNumber, key -> new Object())) {
+      existing = find(setNumber);
+      if (existing.isPresent()) {
+        return existing;
       }
-      Files.move(partial, target, StandardCopyOption.REPLACE_EXISTING);
-    } finally {
-      Files.deleteIfExists(partial);
+      Optional<String> url = imageUrl(setNumber);
+      if (url.isEmpty()) {
+        return Optional.empty();
+      }
+
+      Path target = imagesDir.resolve(setNumber + "." + extensionOf(url.get()));
+      Path partial = imagesDir.resolve(setNumber + ".part");
+      Files.createDirectories(imagesDir);
+      try {
+        HttpRequest request = HttpRequest.newBuilder(URI.create(url.get())).build();
+        HttpResponse<Path> response = http.send(request, HttpResponse.BodyHandlers.ofFile(partial));
+        if (response.statusCode() != 200) {
+          throw new IOException("Set image download failed with HTTP " + response.statusCode());
+        }
+        Files.move(partial, target, StandardCopyOption.REPLACE_EXISTING);
+      } finally {
+        Files.deleteIfExists(partial);
+      }
+      return Optional.of(target);
     }
-    return Optional.of(target);
   }
 
   public FileSystemResource resource(Path image) {
