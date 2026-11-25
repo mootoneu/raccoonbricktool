@@ -90,6 +90,7 @@ public class SetImageBackfill {
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       lastError = "Interrupted";
+      log.warn("Image backfill interrupted", e);
     } finally {
       progress = new Progress(false, total, processed, downloaded, skipped, noImage, failed, lastError);
       log.info("Image backfill finished: {} downloaded, {} already stored, {} without picture, {} failed",

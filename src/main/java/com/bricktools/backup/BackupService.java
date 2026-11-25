@@ -13,6 +13,8 @@ import java.util.Map;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
@@ -20,6 +22,8 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class BackupService {
+
+  private static final Logger log = LoggerFactory.getLogger(BackupService.class);
 
   static final List<String> INCLUDED = List.of(
       "bt/purchased_sets.csv",
@@ -66,6 +70,7 @@ public class BackupService {
         files.add(relative);
       }
     } catch (IOException | RuntimeException e) {
+      log.error("Backup failed while writing {}", target, e);
       Files.deleteIfExists(target);
       throw e;
     }

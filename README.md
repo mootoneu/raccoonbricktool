@@ -162,6 +162,8 @@ Never place a `.env` file under `src/main/resources`: Maven copies that director
 
 Storage concerns are split into `StorageService` (storages), `CollectionRuleService` (rules and adding parts), `DrawerService` (expansion and search) and `PartCatalogService` (stamp-based catalogue cache). `PartStorageService` is a thin compatibility facade; new code should use the focused services directly. Chip view models are built by `CollectionChips`.
 
+Unexpected exceptions are logged with SLF4J at error level with their stack trace; only a safe client-facing message is returned by `ApiExceptionHandler`. Expected validation failures are logged at info level.
+
 The most-used responses (purchases, storages, collection rules and part information) are mapped to records in `com.bricktools.web.dto` at the controller boundary; the JSON keys are unchanged. Services still return maps so existing service tests and internal callers stay simple.
 
 The REST layer is split into small controllers by domain in `com.bricktools.web` (`AdminController`, `PartController`, `PartStorageController`, `PabController`, `BrickOwlController`, `PurchaseController`, `WishlistController`, `ColorController`, `PriceController` and `ImageController`), each with only the services it needs. The API paths are unchanged by this split.

@@ -185,9 +185,10 @@ public class PurchaseService {
       setImages.ensure(setNumber);
     } catch (IOException e) {
       log.warn("Could not fetch the image of set {}: {}", setNumber, e.getMessage());
+      log.debug("Image fetch failure details for set {}", setNumber, e);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      log.warn("Interrupted while fetching the image of set {}", setNumber);
+      log.warn("Interrupted while fetching the image of set {}", setNumber, e);
     }
   }
 
