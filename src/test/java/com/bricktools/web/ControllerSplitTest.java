@@ -43,7 +43,7 @@ class ControllerSplitTest {
       assertThat(mappings).as("endpoints in %s", controller.getSimpleName()).isLessThanOrEqualTo(15);
       total += (int) mappings;
     }
-    assertThat(total).isEqualTo(65);
+    assertThat(total).isEqualTo(66); // 65 API endpoints plus GET /config.js
   }
 
   private static boolean isEndpoint(Method method) {
