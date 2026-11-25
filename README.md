@@ -147,6 +147,8 @@ mvn spring-boot:run
 
 Alternatively, IDEs and deployment platforms can set `BRICKOWL_API_KEY` in their run/deployment configuration. When the variable is missing, the application still starts, but BrickOwl updates are rejected with an explicit configuration error.
 
+Never place a `.env` file under `src/main/resources`: Maven copies that directory into the jar, so a secret there would be shipped in the artifact. Keep local overrides outside the classpath (for example a gitignored `application-local.yml` next to the jar). The `ClasspathSecretsTest` build check fails if a `.env` file ends up in the resources tree or on the classpath. If a jar containing a real key was ever distributed, rotate that key.
+
 ## Development
 
 - Build: `mvn -B package`
