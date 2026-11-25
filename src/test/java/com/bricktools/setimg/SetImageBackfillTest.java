@@ -76,7 +76,7 @@ class SetImageBackfillTest {
         dir.toString(),
         new BrickToolsProperties.Rebrickable(""),
         new BrickToolsProperties.BrickWatch("", 0),
-        new BrickToolsProperties.BrickOwl("", ""));
+        new BrickToolsProperties.BrickOwl("", "", ""));
     SetImageService images = new SetImageService(props);
     return new SetImageBackfill(images, new PurchaseService(props, images, new ThemeImageService(props),
         new OtherImageService(props), new PeopleService(props, new OtherImageService(props))));

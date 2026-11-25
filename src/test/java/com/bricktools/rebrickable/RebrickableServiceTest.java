@@ -50,7 +50,7 @@ class RebrickableServiceTest {
         dir.toString(),
         new BrickToolsProperties.Rebrickable(server.baseUrl() + "/rebrickable.zip"),
         new BrickToolsProperties.BrickWatch("", 0),
-        new BrickToolsProperties.BrickOwl("", "")), notifications);
+        new BrickToolsProperties.BrickOwl("", "", "")), notifications);
   }
 
   private void holdDownload(CountDownLatch started, CountDownLatch release) throws IOException {
@@ -232,7 +232,7 @@ class RebrickableServiceTest {
         dir.toString(),
         new BrickToolsProperties.Rebrickable(server.baseUrl() + "/missing.zip"),
         new BrickToolsProperties.BrickWatch("", 0),
-        new BrickToolsProperties.BrickOwl("", "")), notifications);
+        new BrickToolsProperties.BrickOwl("", "", "")), notifications);
 
     assertThatThrownBy(service::update).isInstanceOf(IOException.class).hasMessageContaining("404");
     assertThat(service.status()).containsEntry("lastDownload", null);

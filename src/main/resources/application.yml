@@ -15,3 +15,5 @@ bricktools:
     base-url: https://api.brickowl.com/v1
     # Never commit the key. Set it in the environment that runs the application.
     api-key: ${BRICKOWL_API_KEY:}
+    # Public user id used to build links to BrickOwl orders.
+    user-id: ${BRICKOWL_USER_ID:934717}

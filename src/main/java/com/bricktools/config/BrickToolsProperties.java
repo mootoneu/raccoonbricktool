@@ -14,5 +14,5 @@ public record BrickToolsProperties(String dataDir, Rebrickable rebrickable, Bric
 
   public record BrickWatch(String baseUrl, long minDelayMs) {}
 
-  public record BrickOwl(String baseUrl, String apiKey) {}
+  public record BrickOwl(String baseUrl, String apiKey, String userId) {}
 }

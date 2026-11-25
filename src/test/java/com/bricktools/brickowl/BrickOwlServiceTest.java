@@ -36,7 +36,7 @@ class BrickOwlServiceTest {
         dir.toString(),
         new BrickToolsProperties.Rebrickable(""),
         new BrickToolsProperties.BrickWatch("", 0),
-        new BrickToolsProperties.BrickOwl("https://api.brickowl.com/v1", apiKey));
+        new BrickToolsProperties.BrickOwl("https://api.brickowl.com/v1", apiKey, ""));
   }
 
   private static String order(String id, String time, String store, String weight, String total) {

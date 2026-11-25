@@ -303,6 +303,6 @@ class PartServiceTest {
         dir.toString(),
         new BrickToolsProperties.Rebrickable(""),
         new BrickToolsProperties.BrickWatch("", 0),
-        new BrickToolsProperties.BrickOwl("", ""));
+        new BrickToolsProperties.BrickOwl("", "", ""));
   }
 }

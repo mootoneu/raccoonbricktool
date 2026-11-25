@@ -54,6 +54,14 @@ test('collectionTokens and matchesCollectionQuery search all words', () => {
   assert.equal(u.matchesCollectionQuery(['Brick 2X4', 'Red'], tokens), true);
 });
 
+test('brickowlOrderUrl uses the configured user id', () => {
+  global.BrickToolsConfig = { brickowlUserId: '12345' };
+  assert.equal(BrickTools.brickowlOrderUrl('99'),
+      'https://www.brickowl.com/user/12345/orders/99');
+  global.BrickToolsConfig = {};
+  assert.equal(BrickTools.brickowlOrderUrl('99'), '');
+});
+
 test('getPartNameFromBOName cleans LEGO prefix, color and trailing set number', () => {
   assert.equal(BrickTools.getPartNameFromBOName('LEGO Brick 2 x 4 Red (7538)', 'Red'), 'Brick 2 x 4');
   assert.equal(BrickTools.getPartNameFromBOName('LEGO Plate 1 x 2 (4175 / 31593)'), 'Plate 1 x 2');

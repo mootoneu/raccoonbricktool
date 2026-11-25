@@ -42,11 +42,14 @@
     BrickTools.BrickOwlShared.sortRows(orders, sortState.orders).forEach(function(o) {
       const cells = [o.OrderTime, o.StoreName, o.Weight, o.TotalParts, o.TotalLots,
         fmt.money(o.PaidTotal), fmt.money(o.RefundTotal), fmt.money(o.Total)];
-      const url = 'https://www.brickowl.com/user/934717/orders/' + encodeURIComponent(o.Id);
+      const url = BrickTools.brickowlOrderUrl(o.Id);
+      const orderCell = url
+        ? '<a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">' + esc(o.Id) + '</a>'
+        : esc(o.Id);
       const isActive = active && active.type === 'brickowl'
         && String(active.orderId) === String(o.Id);
       $tbody.append('<tr class="clickable' + (isActive ? ' selected' : '') + '" data-id="' + esc(o.Id) + '">' +
-        '<td><a href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">' + esc(o.Id) + '</a></td>' +
+        '<td>' + orderCell + '</td>' +
         cells.map(function(v) { return '<td>' + esc(v) + '</td>'; }).join('') +
         '<td><button type="button" class="btn secondary icon-btn bo-items" data-id="' + esc(o.Id) +
           '" title="Order items" aria-label="Order items">' + BrickTools.icon('parts') + '</button>' +

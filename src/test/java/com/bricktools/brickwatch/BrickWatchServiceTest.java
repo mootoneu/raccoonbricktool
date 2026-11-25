@@ -56,7 +56,7 @@ class BrickWatchServiceTest {
         dir.toString(),
         new BrickToolsProperties.Rebrickable(""),
         new BrickToolsProperties.BrickWatch(server.baseUrl() + "/fr-FR/set/", minDelayMs),
-        new BrickToolsProperties.BrickOwl("", ""));
+        new BrickToolsProperties.BrickOwl("", "", ""));
     return new BrickWatchService(props);
   }
 

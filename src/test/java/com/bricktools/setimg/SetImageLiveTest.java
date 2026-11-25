@@ -27,7 +27,7 @@ class SetImageLiveTest {
         dir.toString(),
         new BrickToolsProperties.Rebrickable(""),
         new BrickToolsProperties.BrickWatch("", 0),
-        new BrickToolsProperties.BrickOwl("", "")));
+        new BrickToolsProperties.BrickOwl("", "", "")));
 
     Path image = service.ensure("75192").orElseThrow();
 

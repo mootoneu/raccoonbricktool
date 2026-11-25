@@ -61,6 +61,17 @@
     return $('<span>').text(value == null ? '' : String(value)).html();
   }
 
+  /** Link to a BrickOwl order using the user id served by /config.js (never hard-coded in the UI). */
+  function brickowlOrderUrl(orderId) {
+    const config = window.BrickToolsConfig || {};
+    const userId = String(config.brickowlUserId == null ? '' : config.brickowlUserId).trim();
+    if (!userId) {
+      return '';
+    }
+    return 'https://www.brickowl.com/user/' + encodeURIComponent(userId)
+      + '/orders/' + encodeURIComponent(orderId);
+  }
+
   // ============================================================================
   // Icons
   // ============================================================================
@@ -426,7 +437,7 @@
     api, errorOf, esc, fmt, tag, initHeader, initTabs,
     storageGet, storageSet,
     getCookie, setCookie, rememberedOption, today, readableText, getPartNameFromBOName,
-    partImageCell, firstCommaValue, itemImageUrls, partImageUrls,
+    partImageCell, firstCommaValue, itemImageUrls, partImageUrls, brickowlOrderUrl,
     icon, iconButton, decorateIcons
   });
 })(window, jQuery);

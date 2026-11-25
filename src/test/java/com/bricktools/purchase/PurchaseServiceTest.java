@@ -69,7 +69,7 @@ class PurchaseServiceTest {
         dir.toString(),
         new BrickToolsProperties.Rebrickable(""),
         new BrickToolsProperties.BrickWatch("", 0),
-        new BrickToolsProperties.BrickOwl("", ""));
+        new BrickToolsProperties.BrickOwl("", "", ""));
     service = new PurchaseService(props, new SetImageService(props), new ThemeImageService(props),
         new OtherImageService(props), new PeopleService(props, new OtherImageService(props)));
   }

@@ -5,8 +5,6 @@
 (function () {
   'use strict';
 
-  const ORDER_URL = 'https://www.brickowl.com/user/934717/orders/';
-
   if (typeof BrickTools === 'undefined') {
     window.BrickTools = {};
   }
@@ -69,8 +67,13 @@
       const details = order && typeof order === 'object'
         ? [order.orderTime, order.storeName].filter(Boolean).join(' · ')
         : '';
+      const url = BrickTools.brickowlOrderUrl(id);
+      if (!url) {
+        $cell.append(document.createTextNode(id));
+        return;
+      }
       const $link = $('<a></a>')
-        .attr('href', ORDER_URL + encodeURIComponent(id))
+        .attr('href', url)
         .attr('target', '_blank')
         .attr('rel', 'noopener noreferrer')
         .text(id);
@@ -83,7 +86,6 @@
   }
 
   BrickTools.PartsCollectionShared = {
-    ORDER_URL: ORDER_URL,
     compareValues: shared.compareValues,
     sortValue: sortValue,
     sortRows: sortRows,

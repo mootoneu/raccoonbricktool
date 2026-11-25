@@ -131,6 +131,7 @@ Configuration is in `src/main/resources/application.yml`:
 - `bricktools.rebrickable.download-url` - Rebrickable download archive.
 - `bricktools.brickwatch.base-url` and `min-delay-ms` - BrickWatch scraping settings.
 - `bricktools.brickowl.base-url` and `api-key` - BrickOwl API settings. The key is read from the `BRICKOWL_API_KEY` environment variable and is never stored in the repository.
+- `bricktools.brickowl.user-id` - public BrickOwl user id used for order links (default `934717`, override with `BRICKOWL_USER_ID`). It is served to the browser by `GET /config.js`, which every page loads before the other scripts; no secret is included.
 
 Secrets are not committed. Provide the BrickOwl API key through the environment before starting the application:
 

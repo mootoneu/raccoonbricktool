@@ -24,7 +24,7 @@ class BrickWatchLiveTest {
         dir.toString(),
         new BrickToolsProperties.Rebrickable(""),
         new BrickToolsProperties.BrickWatch("https://www.brickwatch.net/fr-FR/set/", 1000),
-        new BrickToolsProperties.BrickOwl("", "")));
+        new BrickToolsProperties.BrickOwl("", "", "")));
   }
 
   @Test

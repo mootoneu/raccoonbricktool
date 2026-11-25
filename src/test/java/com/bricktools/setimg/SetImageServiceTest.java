@@ -62,7 +62,7 @@ class SetImageServiceTest {
         dir.toString(),
         new BrickToolsProperties.Rebrickable(""),
         new BrickToolsProperties.BrickWatch("", 0),
-        new BrickToolsProperties.BrickOwl("", "")));
+        new BrickToolsProperties.BrickOwl("", "", "")));
   }
 
   private static void send(com.sun.net.httpserver.HttpExchange exchange, int status, byte[] body) throws IOException {
