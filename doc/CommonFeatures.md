@@ -108,6 +108,8 @@ Data tables follow the same conventions:
 - Empty results show a single muted row explaining why (no data or no match).
 - Row actions are placed in the last column (`actions-col` / `row-actions`). They are compact icon-only buttons with a tooltip and an accessible label.
 
+Sorting, status messages, color normalization and color chips are implemented once in `js/shared/table.js` (`BrickTools.Shared`). The BrickOwl and Parts Collection modules delegate to it, so their tables and color chips behave identically; only collection-specific helpers (for example sorting by order count) remain in the page modules.
+
 ## People, Vendors, and Tags
 
 Vendors, buyers, owners, and wishlist members are plain names in the CSV data. They are displayed as:
