@@ -1,5 +1,6 @@
 package com.bricktools.part;
 
+import com.bricktools.color.ColorService;
 import com.bricktools.config.BrickToolsProperties;
 import com.bricktools.csv.Csv;
 import java.io.IOException;
@@ -50,6 +51,7 @@ public class PartImageService {
           String.CASE_INSENSITIVE_ORDER)
       .thenComparingInt(row -> toInt(row.get("ColorId")));
 
+  private final ColorService colors;
   private final Path inventoryPartsFile;
   private final Path partColorUrlFile;
   private final Path defaultColorFile;
@@ -66,7 +68,8 @@ public class PartImageService {
 
   private record PartColorKey(String partNumber, int colorId) {}
 
-  public PartImageService(BrickToolsProperties props) {
+  public PartImageService(BrickToolsProperties props, ColorService colors) {
+    this.colors = colors;
     Path data = props.dataPath();
     this.inventoryPartsFile = data.resolve("re/inventory_parts.csv");
     this.partColorUrlFile = data.resolve("bt/part_color_url.csv");
@@ -217,6 +220,27 @@ public class PartImageService {
     }
     urls();
     return colorsCache.getOrDefault(partNumber, List.of());
+  }
+
+  /** Joins the colors available for a part with their catalogue details for the part information API. */
+  public List<Map<String, Object>> colorsForPart(String partNumber) throws IOException {
+    Map<Integer, Map<String, Object>> catalog = new HashMap<>();
+    for (Map<String, Object> color : colors.colors()) {
+      if (color.get("id") instanceof Integer id) {
+        catalog.put(id, color);
+      }
+    }
+    List<Map<String, Object>> result = new ArrayList<>();
+    for (Integer colorId : colors(partNumber)) {
+      Map<String, Object> color = catalog.get(colorId);
+      Map<String, Object> entry = new LinkedHashMap<>();
+      entry.put("colorId", colorId);
+      entry.put("name", color == null ? "" : color.get("name"));
+      entry.put("rgb", color == null ? "" : color.get("rgb"));
+      entry.put("isTrans", color != null && Boolean.TRUE.equals(color.get("isTrans")));
+      result.add(entry);
+    }
+    return result;
   }
 
   /**

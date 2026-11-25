@@ -3,6 +3,7 @@ package com.bricktools.part;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.bricktools.color.ColorService;
 import com.bricktools.config.BrickToolsProperties;
 import com.bricktools.support.TestHttpServer;
 import java.io.IOException;
@@ -56,6 +57,10 @@ class PartImageServiceTest {
         "4,3002,5,1,False,",
         "5,3002,5,1,False," + server.baseUrl() + "/photos/5/3002-5-def.png",
         "6,3003,5,1,False,") + "\n");
+    Files.writeString(dir.resolve("re/colors.csv"), String.join("\n",
+        "id,name,rgb,is_trans,num_parts,num_sets,y1,y2",
+        "5,Red,C91A09,False,0,0,0,0",
+        "7,Blue,0055BF,False,0,0,0,0") + "\n");
   }
 
   @AfterEach
@@ -64,11 +69,23 @@ class PartImageServiceTest {
   }
 
   private PartImageService service() {
-    return new PartImageService(new BrickToolsProperties(
+    BrickToolsProperties props = new BrickToolsProperties(
         dir.toString(),
         new BrickToolsProperties.Rebrickable(""),
         new BrickToolsProperties.BrickWatch("", 0),
-        new BrickToolsProperties.BrickOwl("", "")));
+        new BrickToolsProperties.BrickOwl("", ""));
+    return new PartImageService(props, new ColorService(props));
+  }
+
+  @Test
+  void colorsForPartJoinsCatalogueDetails() throws IOException {
+    PartImageService service = service();
+    service.generatePartColorUrls();
+
+    assertThat(service.colorsForPart("3001"))
+        .containsExactly(
+            Map.of("colorId", 5, "name", "Red", "rgb", "C91A09", "isTrans", false),
+            Map.of("colorId", 7, "name", "Blue", "rgb", "0055BF", "isTrans", false));
   }
 
   private static void send(com.sun.net.httpserver.HttpExchange exchange, int status, byte[] body)

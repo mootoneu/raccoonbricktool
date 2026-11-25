@@ -272,26 +272,26 @@ public class PartStorageService {
    */
   public Integer defaultColorForPart(String partNumber) throws IOException {
     Catalog data = catalog();
-    PartInfo part = data.parts.get(clean(partNumber));
+    Catalog.PartInfo part = data.parts.get(clean(partNumber));
     if (part == null) {
       return null;
     }
-    ColorInfo color = colorFor(data, part, null);
+    Catalog.ColorInfo color = Catalog.colorFor(data, part, null);
     return color == null ? null : toInt(color.id());
   }
 
   public String defaultColorNameForPart(String partNumber) throws IOException {
     Catalog data = catalog();
-    PartInfo part = data.parts.get(clean(partNumber));
+    Catalog.PartInfo part = data.parts.get(clean(partNumber));
     if (part == null) {
       return "";
     }
-    ColorInfo color = colorFor(data, part, null);
+    Catalog.ColorInfo color = Catalog.colorFor(data, part, null);
     return color == null ? "" : color.name();
   }
 
   public String partName(String partNumber) throws IOException {
-    PartInfo part = catalog().parts.get(clean(partNumber));
+    Catalog.PartInfo part = catalog().parts.get(clean(partNumber));
     return part == null ? "" : part.name();
   }
 
@@ -320,7 +320,7 @@ public class PartStorageService {
     for (Map<String, String> row : Csv.read(colorsFile)) {
       String id = clean(row.get("id"));
       if (!id.isEmpty()) {
-        data.colors.put(id, new ColorInfo(id, clean(row.get("name")), clean(row.get("rgb"))));
+        data.colors.put(id, new Catalog.ColorInfo(id, clean(row.get("name")), clean(row.get("rgb"))));
       }
     }
     for (Map<String, String> row : Csv.read(defaultColorsFile)) {
@@ -338,7 +338,7 @@ public class PartStorageService {
       String categoryId = clean(row.get("part_cat_id"));
       String name = clean(row.get("name"));
       String categoryName = data.categoryNames.getOrDefault(categoryId, "");
-      data.parts.put(number, new PartInfo(number, name, categoryId, categoryName, decorated(number, name)));
+      data.parts.put(number, new Catalog.PartInfo(number, name, categoryId, categoryName, decorated(number, name)));
     }
     for (Map<String, String> row : Csv.read(partColorsFile)) {
       String partNumber = clean(row.get("PartNumber"));
@@ -388,7 +388,7 @@ public class PartStorageService {
   private MatchContext match(Catalog data, String query, List<Map<String, String>> allRows) {
     String needle = query.toLowerCase(Locale.ROOT);
     Set<String> colorIds = new LinkedHashSet<>();
-    for (ColorInfo color : data.colors.values()) {
+    for (Catalog.ColorInfo color : data.colors.values()) {
       if (color.id().equals(query) || color.name().toLowerCase(Locale.ROOT).contains(needle)) {
         colorIds.add(color.id());
       }
@@ -396,7 +396,7 @@ public class PartStorageService {
 
     Map<String, String> colorByPart = new HashMap<>();
     LinkedHashSet<String> numbers = new LinkedHashSet<>();
-    for (PartInfo part : data.parts.values()) {
+    for (Catalog.PartInfo part : data.parts.values()) {
       if (numbers.size() >= MATCH_LIMIT) {
         break;
       }
@@ -422,7 +422,7 @@ public class PartStorageService {
     }
     Map<String, Set<Map<String, String>>> explicitRows = new HashMap<>();
     for (String number : numbers) {
-      PartInfo part = data.parts.get(number);
+      Catalog.PartInfo part = data.parts.get(number);
       if (part == null || part.decorated()) {
         continue;
       }
@@ -453,7 +453,7 @@ public class PartStorageService {
       if (result.size() >= DRAWER_MATCH_LIMIT) {
         break;
       }
-      PartInfo part = data.parts.get(number);
+      Catalog.PartInfo part = data.parts.get(number);
       if (part == null) {
         continue;
       }
@@ -462,7 +462,7 @@ public class PartStorageService {
           continue;
         }
         String queryColor = context.colorByPart().get(number);
-        ColorInfo color = colorFor(data, part, queryColor);
+        Catalog.ColorInfo color = Catalog.colorFor(data, part, queryColor);
         String key = number + "\u0000" + (color == null ? "" : color.id());
         if (seen.add(key)) {
           result.add(partEntry(data, part, color));
@@ -473,7 +473,7 @@ public class PartStorageService {
     return result;
   }
 
-  private boolean matchesRow(Catalog data, Map<String, String> row, PartInfo part, String requiredColor,
+  private boolean matchesRow(Catalog data, Map<String, String> row, Catalog.PartInfo part, String requiredColor,
                              MatchContext context) {
     if (!partsMatch(data, row.get("Parts"), part)) {
       return false;
@@ -484,7 +484,7 @@ public class PartStorageService {
     return colorsMatch(data, row, part, context);
   }
 
-  private boolean partsMatch(Catalog data, String value, PartInfo part) {
+  private boolean partsMatch(Catalog data, String value, Catalog.PartInfo part) {
     List<String> tokens = split(value);
     if (tokens.isEmpty()) {
       return false;
@@ -518,7 +518,7 @@ public class PartStorageService {
             && entry.getValue().equalsIgnoreCase(category));
   }
 
-  private boolean colorsMatch(Catalog data, Map<String, String> row, PartInfo part, MatchContext context) {
+  private boolean colorsMatch(Catalog data, Map<String, String> row, Catalog.PartInfo part, MatchContext context) {
     List<String> tokens = split(row.get("Colors"));
     if (tokens.isEmpty()) {
       return false;
@@ -543,7 +543,7 @@ public class PartStorageService {
   }
 
   /** Uses the per-request index instead of rescanning the whole collection for every candidate part and row. */
-  private boolean explicitlyListed(PartInfo part, Map<String, String> current, MatchContext context) {
+  private boolean explicitlyListed(Catalog.PartInfo part, Map<String, String> current, MatchContext context) {
     for (Map<String, String> row : context.explicitRows().getOrDefault(part.number(), Set.of())) {
       if (row != current) {
         return true;
@@ -552,20 +552,8 @@ public class PartStorageService {
     return false;
   }
 
-  private List<String> colorsOf(Catalog data, PartInfo part) {
+  private List<String> colorsOf(Catalog data, Catalog.PartInfo part) {
     return data.partColorIds.getOrDefault(part.number(), List.of());
-  }
-
-  private ColorInfo colorFor(Catalog data, PartInfo part, String requiredColor) {
-    List<String> colorIds = colorsOf(data, part);
-    String selected = requiredColor;
-    if (selected == null || !colorIds.contains(selected)) {
-      selected = data.defaultColors.get(part.number());
-    }
-    if (selected == null || (!colorIds.isEmpty() && !colorIds.contains(selected))) {
-      selected = colorIds.isEmpty() ? null : colorIds.get(0);
-    }
-    return selected == null ? null : data.colors.get(selected);
   }
 
   private List<Map<String, Object>> resolvedRows(Catalog data, List<Map<String, String>> allRows,
@@ -574,96 +562,16 @@ public class PartStorageService {
     for (int i = 0; i < rows.size(); i++) {
       Map<String, String> row = rows.get(i);
       Map<String, Object> entry = collectionEntry(indexes.get(i), row);
-      entry.put("partChips", partChips(data, row.get("Parts")));
-      entry.put("categoryChips", categoryChips(data, row.get("Parts")));
-      entry.put("tagChips", tagChips(row.get("Parts")));
-      entry.put("colorChips", colorChips(data, row.get("Colors")));
+      entry.put("partChips", CollectionChips.partChips(data, row.get("Parts")));
+      entry.put("categoryChips", CollectionChips.categoryChips(data, row.get("Parts")));
+      entry.put("tagChips", CollectionChips.tagChips(row.get("Parts")));
+      entry.put("colorChips", CollectionChips.colorChips(data, row.get("Colors")));
       result.add(entry);
     }
     return result;
   }
 
-  private List<Map<String, Object>> partChips(Catalog data, String value) {
-    List<Map<String, Object>> chips = new ArrayList<>();
-    for (String token : split(value)) {
-      if (token.startsWith("§") || token.startsWith("#")) {
-        continue;
-      }
-      PartInfo part = data.parts.get(token);
-      Map<String, Object> chip = new LinkedHashMap<>();
-      chip.put("partNumber", token);
-      chip.put("name", part == null ? "" : part.name());
-      chip.put("size", data.sizes.getOrDefault(token, ""));
-      chip.put("categoryName", part == null ? "" : part.categoryName());
-      ColorInfo color = part == null ? null : colorFor(data, part, null);
-      chip.put("colorId", color == null ? null : toInt(color.id()));
-      chips.add(chip);
-    }
-    return chips;
-  }
-
-  private List<Map<String, Object>> categoryChips(Catalog data, String value) {
-    List<Map<String, Object>> chips = new ArrayList<>();
-    for (String token : split(value)) {
-      if (!token.startsWith("§")) {
-        continue;
-      }
-      String category = clean(token.substring(1));
-      String id = category;
-      String name = data.categoryNames.getOrDefault(category, "");
-      if (name.isEmpty()) {
-        for (Map.Entry<String, String> entry : data.categoryNames.entrySet()) {
-          if (entry.getValue().equalsIgnoreCase(category)) {
-            id = entry.getKey();
-            name = entry.getValue();
-            break;
-          }
-        }
-      }
-      Map<String, Object> chip = new LinkedHashMap<>();
-      chip.put("id", toInt(id));
-      chip.put("value", category);
-      chip.put("name", name.isEmpty() ? category : name);
-      chips.add(chip);
-    }
-    return chips;
-  }
-
-  private List<String> tagChips(String value) {
-    List<String> chips = new ArrayList<>();
-    for (String token : split(value)) {
-      if (token.startsWith("#")) {
-        String tag = clean(token.substring(1));
-        if (!tag.isEmpty()) {
-          chips.add(tag);
-        }
-      }
-    }
-    return chips;
-  }
-
-  private List<Map<String, Object>> colorChips(Catalog data, String value) {
-    List<Map<String, Object>> chips = new ArrayList<>();
-    for (String token : split(value)) {
-      Map<String, Object> chip = new LinkedHashMap<>();
-      if (isNumeric(token)) {
-        ColorInfo color = data.colors.get(token);
-        chip.put("id", toInt(token));
-        chip.put("name", color == null ? token : color.name());
-        chip.put("rgb", color == null ? "" : color.rgb());
-        chip.put("keyword", false);
-      } else {
-        chip.put("id", null);
-        chip.put("name", canonicalKeyword(token));
-        chip.put("rgb", "");
-        chip.put("keyword", true);
-      }
-      chips.add(chip);
-    }
-    return chips;
-  }
-
-  private Map<String, Object> partEntry(Catalog data, PartInfo part, ColorInfo color) {
+  private Map<String, Object> partEntry(Catalog data, Catalog.PartInfo part, Catalog.ColorInfo color) {
     Map<String, Object> entry = new LinkedHashMap<>();
     entry.put("partNumber", part.number());
     entry.put("name", part.name());
@@ -933,7 +841,7 @@ public class PartStorageService {
     return String.join(";", tokens);
   }
 
-  private static String canonicalKeyword(String token) {
+  static String canonicalKeyword(String token) {
     if (token.equalsIgnoreCase("Any")) {
       return "Any";
     }
@@ -950,7 +858,7 @@ public class PartStorageService {
     return split(value).stream().anyMatch(token -> token.equalsIgnoreCase("Any"));
   }
 
-  private static List<String> split(String value) {
+  static List<String> split(String value) {
     List<String> tokens = new ArrayList<>();
     if (value == null) {
       return tokens;
@@ -964,7 +872,7 @@ public class PartStorageService {
     return tokens;
   }
 
-  private static boolean isNumeric(String value) {
+  static boolean isNumeric(String value) {
     return value != null && value.matches("-?\\d+");
   }
 
@@ -977,11 +885,11 @@ public class PartStorageService {
         || lowerNumber.matches(".*(pr|pat)\\d+.*");
   }
 
-  private static String clean(String value) {
+  static String clean(String value) {
     return value == null ? "" : value.trim();
   }
 
-  private static Integer toInt(String value) {
+  static Integer toInt(String value) {
     try {
       return value == null || value.isBlank() ? null : Integer.valueOf(value.trim());
     } catch (NumberFormatException e) {
@@ -989,23 +897,7 @@ public class PartStorageService {
     }
   }
 
-  private record PartInfo(String number, String name, String categoryId, String categoryName,
-                          boolean decorated) {
-  }
-
-  private record ColorInfo(String id, String name, String rgb) {
-  }
-
   private record MatchContext(Set<String> numbers, Map<String, String> colorByPart,
                               Map<String, Set<Map<String, String>>> explicitRows) {
-  }
-
-  private static final class Catalog {
-    private final Map<String, PartInfo> parts = new LinkedHashMap<>();
-    private final Map<String, String> categoryNames = new LinkedHashMap<>();
-    private final Map<String, ColorInfo> colors = new LinkedHashMap<>();
-    private final Map<String, List<String>> partColorIds = new HashMap<>();
-    private final Map<String, String> defaultColors = new HashMap<>();
-    private final Map<String, String> sizes = new HashMap<>();
   }
 }

@@ -35,9 +35,6 @@ import com.bricktools.wishlist.WishlistRequest;
 import com.bricktools.wishlist.WishlistService;
 import java.io.IOException;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -798,7 +795,7 @@ public class ApiController {
     }
     int defaultColor = partImages.defaultColor(partNumber);
     info.put("defaultColorId", defaultColor < 0 ? null : defaultColor);
-    info.put("colors", partColors(partNumber));
+    info.put("colors", partImages.colorsForPart(partNumber));
     return ResponseEntity.ok(info);
   }
 
@@ -819,27 +816,6 @@ public class ApiController {
       throw new IllegalArgumentException("Color id is required");
     }
     partImages.setDefaultColor(partNumber, request.colorId());
-  }
-
-  private List<Map<String, Object>> partColors(String partNumber) throws IOException {
-    Map<Integer, Map<String, Object>> catalog = new HashMap<>();
-    for (Map<String, Object> color : colors.colors()) {
-      Object id = color.get("id");
-      if (id instanceof Integer colorId) {
-        catalog.put(colorId, color);
-      }
-    }
-    List<Map<String, Object>> result = new ArrayList<>();
-    for (Integer colorId : partImages.colors(partNumber)) {
-      Map<String, Object> color = catalog.get(colorId);
-      Map<String, Object> entry = new LinkedHashMap<>();
-      entry.put("colorId", colorId);
-      entry.put("name", color == null ? "" : color.get("name"));
-      entry.put("rgb", color == null ? "" : color.get("rgb"));
-      entry.put("isTrans", color != null && Boolean.TRUE.equals(color.get("isTrans")));
-      result.add(entry);
-    }
-    return result;
   }
 
   @GetMapping(path = "/parts/{partNumber}/image", produces = "image/*")
