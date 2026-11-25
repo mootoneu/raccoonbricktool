@@ -1,5 +1,10 @@
 package com.bricktools.storage;
 
+import static com.bricktools.util.Values.clean;
+import static com.bricktools.util.Values.isNumeric;
+import static com.bricktools.util.Values.split;
+import static com.bricktools.util.Values.toInt;
+
 import com.bricktools.config.BrickToolsProperties;
 import com.bricktools.csv.Csv;
 import com.bricktools.part.PartSize;
@@ -858,24 +863,6 @@ public class PartStorageService {
     return split(value).stream().anyMatch(token -> token.equalsIgnoreCase("Any"));
   }
 
-  static List<String> split(String value) {
-    List<String> tokens = new ArrayList<>();
-    if (value == null) {
-      return tokens;
-    }
-    for (String token : value.split(";")) {
-      String cleaned = clean(token);
-      if (!cleaned.isEmpty()) {
-        tokens.add(cleaned);
-      }
-    }
-    return tokens;
-  }
-
-  static boolean isNumeric(String value) {
-    return value != null && value.matches("-?\\d+");
-  }
-
   private static boolean decorated(String number, String name) {
     String lowerName = name == null ? "" : name.toLowerCase(Locale.ROOT);
     String lowerNumber = number == null ? "" : number.toLowerCase(Locale.ROOT);
@@ -885,17 +872,7 @@ public class PartStorageService {
         || lowerNumber.matches(".*(pr|pat)\\d+.*");
   }
 
-  static String clean(String value) {
-    return value == null ? "" : value.trim();
-  }
 
-  static Integer toInt(String value) {
-    try {
-      return value == null || value.isBlank() ? null : Integer.valueOf(value.trim());
-    } catch (NumberFormatException e) {
-      return null;
-    }
-  }
 
   private record MatchContext(Set<String> numbers, Map<String, String> colorByPart,
                               Map<String, Set<Map<String, String>>> explicitRows) {

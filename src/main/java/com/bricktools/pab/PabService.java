@@ -1,5 +1,8 @@
 package com.bricktools.pab;
 
+import static com.bricktools.util.Values.clean;
+import static com.bricktools.util.Values.toInt;
+
 import com.bricktools.config.BrickToolsProperties;
 import com.bricktools.csv.Csv;
 import com.bricktools.part.PartSize;
@@ -295,17 +298,7 @@ public class PabService {
         .orElse(0) + 1;
   }
 
-  private static String clean(String value) {
-    return value == null ? "" : value.trim();
-  }
 
-  private static Integer toInt(String value) {
-    try {
-      return value == null || value.isBlank() ? null : Integer.valueOf(value.trim());
-    } catch (NumberFormatException e) {
-      return null;
-    }
-  }
 
   private static Double toDouble(String value) {
     try {

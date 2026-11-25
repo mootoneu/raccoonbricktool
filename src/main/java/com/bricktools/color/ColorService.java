@@ -1,5 +1,9 @@
 package com.bricktools.color;
 
+import static com.bricktools.util.Values.clean;
+import static com.bricktools.util.Values.toInt;
+import static com.bricktools.util.Values.toBoolean;
+
 import com.bricktools.config.BrickToolsProperties;
 import com.bricktools.csv.Csv;
 import java.io.IOException;
@@ -93,23 +97,6 @@ public class ColorService {
     return List.copyOf(names);
   }
 
-  private static String clean(String value) {
-    return value == null ? "" : value.trim();
-  }
 
-  private static Integer toInt(String value) {
-    String text = clean(value);
-    if (text.isEmpty()) {
-      return null;
-    }
-    try {
-      return Integer.valueOf(text);
-    } catch (NumberFormatException e) {
-      return null;
-    }
-  }
 
-  private static boolean toBoolean(String value) {
-    return "true".equalsIgnoreCase(clean(value));
-  }
 }

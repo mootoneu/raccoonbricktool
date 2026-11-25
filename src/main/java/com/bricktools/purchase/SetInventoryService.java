@@ -1,5 +1,8 @@
 package com.bricktools.purchase;
 
+import static com.bricktools.util.Values.clean;
+import static com.bricktools.util.Values.toInt;
+
 import com.bricktools.config.BrickToolsProperties;
 import com.bricktools.csv.Csv;
 import java.io.BufferedReader;
@@ -386,17 +389,7 @@ public class SetInventoryService {
     return partNumber + "\u0000" + colorId;
   }
 
-  private static String clean(String value) {
-    return value == null ? "" : value.trim();
-  }
 
-  private static Integer toInt(String value) {
-    try {
-      return value == null || value.isBlank() ? null : Integer.valueOf(value.trim());
-    } catch (NumberFormatException e) {
-      return null;
-    }
-  }
 
   private record ExpectedPart(String partNumber, int colorId, int quantity) {}
 

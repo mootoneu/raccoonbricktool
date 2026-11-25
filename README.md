@@ -161,7 +161,7 @@ The REST layer is split into small controllers by domain in `com.bricktools.web`
 
 The backend keeps slow work (downloads, network scraping, throttling sleeps) outside service-wide locks: `RebrickableService.status()` stays responsive during an update, `BrickWatchService` reserves throttle slots without sleeping under a lock, and `SetImageService` uses per-set download locks. Keep that property when changing those services.
 
-CSV writes are coordinated by a registry of per-file locks (`FileLocks`), because several services write the same file (notably `bw/setprices.csv`). `Csv.write` also uses a unique temporary file in the target directory, so concurrent writers cannot clobber one another. Use `FileLocks.call` for read-modify-write sequences.
+CSV writes are coordinated by a registry of per-file locks (`FileLocks`), because several services write the same file (notably `bw/setprices.csv`). `Csv.write` also uses a unique temporary file in the target directory, so concurrent writers cannot clobber one another. Use `FileLocks.call` for read-modify-write sequences, with `CsvTable` for loading, finding, changing and saving rows. Shared parsing helpers live in `com.bricktools.util.Values` (static imports), so services should not redefine `clean`, `toInt` or `isNumeric`.
 
 The catalog is cached against the timestamps and sizes of its source files. Within a drawer search, collection rows are indexed by storage and drawer and parts with explicit colors are indexed once, rather than rescanned for every drawer and candidate part.
 

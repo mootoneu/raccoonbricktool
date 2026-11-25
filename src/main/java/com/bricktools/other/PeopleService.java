@@ -1,5 +1,7 @@
 package com.bricktools.other;
 
+import static com.bricktools.util.Values.clean;
+
 import com.bricktools.config.BrickToolsProperties;
 import com.bricktools.csv.Csv;
 import java.io.IOException;
@@ -67,7 +69,4 @@ public class PeopleService {
     return clean(value).toLowerCase(Locale.ROOT);
   }
 
-  private static String clean(String value) {
-    return value == null ? "" : value.trim();
-  }
 }

@@ -1,5 +1,6 @@
 package com.bricktools.storage;
 
+import com.bricktools.util.Values;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -12,7 +13,7 @@ public final class CollectionChips {
 
   public static List<Map<String, Object>> partChips(Catalog data, String value) {
     List<Map<String, Object>> chips = new ArrayList<>();
-    for (String token : PartStorageService.split(value)) {
+    for (String token : Values.split(value)) {
       if (token.startsWith("§") || token.startsWith("#")) {
         continue;
       }
@@ -23,7 +24,7 @@ public final class CollectionChips {
       chip.put("size", data.sizes.getOrDefault(token, ""));
       chip.put("categoryName", part == null ? "" : part.categoryName());
       Catalog.ColorInfo color = part == null ? null : Catalog.colorFor(data, part, null);
-      chip.put("colorId", color == null ? null : PartStorageService.toInt(color.id()));
+      chip.put("colorId", color == null ? null : Values.toInt(color.id()));
       chips.add(chip);
     }
     return chips;
@@ -31,11 +32,11 @@ public final class CollectionChips {
 
   public static List<Map<String, Object>> categoryChips(Catalog data, String value) {
     List<Map<String, Object>> chips = new ArrayList<>();
-    for (String token : PartStorageService.split(value)) {
+    for (String token : Values.split(value)) {
       if (!token.startsWith("§")) {
         continue;
       }
-      String category = PartStorageService.clean(token.substring(1));
+      String category = Values.clean(token.substring(1));
       String id = category;
       String name = data.categoryNames.getOrDefault(category, "");
       if (name.isEmpty()) {
@@ -48,7 +49,7 @@ public final class CollectionChips {
         }
       }
       Map<String, Object> chip = new LinkedHashMap<>();
-      chip.put("id", PartStorageService.toInt(id));
+      chip.put("id", Values.toInt(id));
       chip.put("value", category);
       chip.put("name", name.isEmpty() ? category : name);
       chips.add(chip);
@@ -58,9 +59,9 @@ public final class CollectionChips {
 
   public static List<String> tagChips(String value) {
     List<String> chips = new ArrayList<>();
-    for (String token : PartStorageService.split(value)) {
+    for (String token : Values.split(value)) {
       if (token.startsWith("#")) {
-        String tag = PartStorageService.clean(token.substring(1));
+        String tag = Values.clean(token.substring(1));
         if (!tag.isEmpty()) {
           chips.add(tag);
         }
@@ -71,11 +72,11 @@ public final class CollectionChips {
 
   public static List<Map<String, Object>> colorChips(Catalog data, String value) {
     List<Map<String, Object>> chips = new ArrayList<>();
-    for (String token : PartStorageService.split(value)) {
+    for (String token : Values.split(value)) {
       Map<String, Object> chip = new LinkedHashMap<>();
-      if (PartStorageService.isNumeric(token)) {
+      if (Values.isNumeric(token)) {
         Catalog.ColorInfo color = data.colors.get(token);
-        chip.put("id", PartStorageService.toInt(token));
+        chip.put("id", Values.toInt(token));
         chip.put("name", color == null ? token : color.name());
         chip.put("rgb", color == null ? "" : color.rgb());
         chip.put("keyword", false);

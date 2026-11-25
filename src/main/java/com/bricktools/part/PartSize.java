@@ -1,5 +1,7 @@
 package com.bricktools.part;
 
+import static com.bricktools.util.Values.clean;
+
 import com.bricktools.csv.Csv;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -80,7 +82,4 @@ public final class PartSize {
     return value == null ? "" : value.trim().replaceAll("\\s+", " ");
   }
 
-  private static String clean(String value) {
-    return value == null ? "" : value.trim();
-  }
 }

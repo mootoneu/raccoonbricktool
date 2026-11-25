@@ -1,5 +1,7 @@
 package com.bricktools.storage;
 
+import static com.bricktools.util.Values.clean;
+
 import com.bricktools.brickowl.BrickOwlService;
 import com.bricktools.pab.PabService;
 import java.io.IOException;
@@ -94,7 +96,4 @@ public class ContainerService {
     return added;
   }
 
-  private static String clean(String value) {
-    return value == null ? "" : value.trim();
-  }
 }

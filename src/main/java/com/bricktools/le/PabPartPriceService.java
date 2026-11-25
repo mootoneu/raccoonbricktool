@@ -1,5 +1,8 @@
 package com.bricktools.le;
 
+import static com.bricktools.util.Values.clean;
+import static com.bricktools.util.Values.toInt;
+
 import com.bricktools.config.BrickToolsProperties;
 import com.bricktools.csv.Csv;
 import java.io.IOException;
@@ -70,17 +73,7 @@ public class PabPartPriceService {
     return entry;
   }
 
-  private static String clean(String value) {
-    return value == null ? "" : value.trim();
-  }
 
-  private static Integer toInt(String value) {
-    try {
-      return value == null || value.isBlank() ? null : Integer.valueOf(value.trim());
-    } catch (NumberFormatException e) {
-      return null;
-    }
-  }
 
   private static Double toDouble(String value) {
     try {

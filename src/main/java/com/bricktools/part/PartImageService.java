@@ -1,5 +1,8 @@
 package com.bricktools.part;
 
+import static com.bricktools.util.Values.clean;
+import static com.bricktools.util.Values.intOrZero;
+
 import com.bricktools.color.ColorService;
 import com.bricktools.config.BrickToolsProperties;
 import com.bricktools.csv.Csv;
@@ -49,7 +52,7 @@ public class PartImageService {
   private static final Comparator<Map<String, String>> BY_PART_AND_COLOR = Comparator
       .comparing((Map<String, String> row) -> clean(row.get("PartNumber")),
           String.CASE_INSENSITIVE_ORDER)
-      .thenComparingInt(row -> toInt(row.get("ColorId")));
+      .thenComparingInt(row -> intOrZero(row.get("ColorId")));
 
   private final ColorService colors;
   private final Path inventoryPartsFile;
@@ -343,7 +346,7 @@ public class PartImageService {
         String partNumber = clean(row.get("PartNumber"));
         String colorId = clean(row.get("ColorId"));
         if (!partNumber.isEmpty() && !colorId.isEmpty()) {
-          defaults.put(partNumber, toInt(colorId));
+          defaults.put(partNumber, intOrZero(colorId));
         }
       }
       defaultColorCache = defaults;
@@ -365,7 +368,7 @@ public class PartImageService {
         String itemNumber = clean(row.get("ItemNumber"));
         String url = clean(row.get("ImgUrl"));
         if (!partNumber.isEmpty() && !colorId.isEmpty() && !url.isEmpty()) {
-          int color = toInt(colorId);
+          int color = intOrZero(colorId);
           urls.put(key(partNumber, colorId), url);
           colors.computeIfAbsent(partNumber, key -> new TreeSet<>()).add(color);
           if (!itemNumber.isEmpty()) {
@@ -415,15 +418,5 @@ public class PartImageService {
     return partNumber + '\u0000' + colorId;
   }
 
-  private static String clean(String value) {
-    return value == null ? "" : value.trim();
-  }
 
-  private static int toInt(String value) {
-    try {
-      return value == null || value.isBlank() ? 0 : Integer.parseInt(value.trim());
-    } catch (NumberFormatException e) {
-      return 0;
-    }
-  }
 }

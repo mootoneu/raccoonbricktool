@@ -1,16 +1,16 @@
 package com.bricktools.brickwatch;
 
 import com.bricktools.config.BrickToolsProperties;
-import com.bricktools.csv.Csv;
+import com.bricktools.csv.CsvTable;
 import com.bricktools.csv.FileLocks;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -43,10 +43,10 @@ public class BrickWatchService {
       throw new IllegalArgumentException("Invalid set number: " + setNumber);
     }
 
-    for (Map<String, String> row : Csv.read(pricesFile)) {
-      if (key.equals(row.get("SetNumber"))) {
-        return Map.of("setNumber", key, "legoPrice", new BigDecimal(row.get("LegoPrice")), "source", "stored");
-      }
+    Optional<Map<String, String>> cached = CsvTable.load(pricesFile, HEADERS)
+        .find(row -> key.equals(row.get("SetNumber")));
+    if (cached.isPresent()) {
+      return stored(key, cached.get());
     }
 
     BigDecimal price = scrape(key);
@@ -55,20 +55,22 @@ public class BrickWatchService {
     }
 
     return FileLocks.call(pricesFile, () -> {
-      for (Map<String, String> row : Csv.read(pricesFile)) {
-        if (key.equals(row.get("SetNumber"))) {
-          return Map.<String, Object>of("setNumber", key, "legoPrice", new BigDecimal(row.get("LegoPrice")),
-              "source", "stored");
-        }
+      CsvTable table = CsvTable.load(pricesFile, HEADERS);
+      Optional<Map<String, String>> stored = table.find(row -> key.equals(row.get("SetNumber")));
+      if (stored.isPresent()) {
+        return stored(key, stored.get());
       }
-      List<Map<String, String>> rows = new ArrayList<>(Csv.read(pricesFile));
       Map<String, String> row = new LinkedHashMap<>();
       row.put("SetNumber", key);
       row.put("LegoPrice", price.toPlainString());
-      rows.add(row);
-      Csv.write(pricesFile, HEADERS, rows);
+      table.add(row);
+      table.save();
       return Map.of("setNumber", key, "legoPrice", price, "source", "brickwatch");
     });
+  }
+
+  private static Map<String, Object> stored(String key, Map<String, String> row) {
+    return Map.of("setNumber", key, "legoPrice", new BigDecimal(row.get("LegoPrice")), "source", "stored");
   }
 
   private BigDecimal scrape(String setNumber) throws IOException, InterruptedException {

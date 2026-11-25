@@ -1,12 +1,11 @@
 package com.bricktools.brickonomics;
 
 import com.bricktools.config.BrickToolsProperties;
-import com.bricktools.csv.Csv;
+import com.bricktools.csv.CsvTable;
 import com.bricktools.csv.FileLocks;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,17 +55,13 @@ public class BrickonomicsService {
     }
 
     return FileLocks.call(pricesFile, () -> {
-      List<Map<String, String>> rows = new ArrayList<>();
-      for (Map<String, String> row : Csv.read(pricesFile)) {
-        if (!number.equals(row.get("SetNumber"))) {
-          rows.add(row);
-        }
-      }
+      CsvTable table = CsvTable.load(pricesFile, HEADERS);
+      table.removeIf(row -> number.equals(row.get("SetNumber")));
       Map<String, String> row = new LinkedHashMap<>();
       row.put("SetNumber", number);
       row.put("LegoPrice", price.toPlainString());
-      rows.add(row);
-      Csv.write(pricesFile, HEADERS, rows);
+      table.add(row);
+      table.save();
       return Map.of("setNumber", number, "legoPrice", price, "source", "brickonomics");
     });
   }
