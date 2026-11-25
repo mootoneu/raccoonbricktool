@@ -121,7 +121,7 @@ Lists the physical part storages stored in `data/bt/part_storage.csv`.
 | Description | `Description` |
 | Rules | Number of part collection rows attached to the storage |
 
-The table is sorted by **Order** ascending by default; storages with the same order are sorted by id. Click a column header to sort by another column.
+The table is sorted by **Order** ascending by default; storages with the same order are sorted by id. Click a column header to sort by another column. The storage drawers tab and the exported labels use the same order (Order, then id).
 
 Actions:
 

@@ -37,6 +37,10 @@ public class PartStorageService {
   private static final int MATCH_LIMIT = 3000;
   private static final int DRAWER_MATCH_LIMIT = 200;
   private static final int MAX_DRAWERS = 52;
+  /** One ordering for storages everywhere (table, drawer selector and label export). */
+  private static final Comparator<Map<String, String>> STORAGE_ORDER =
+      Comparator.comparingInt((Map<String, String> row) -> orderOf(row))
+          .thenComparing(row -> clean(row.get("Id")), String.CASE_INSENSITIVE_ORDER);
 
   private final Path storageFile;
   private final Path collectionFile;
@@ -70,9 +74,7 @@ public class PartStorageService {
 
   public synchronized List<Map<String, Object>> storages() throws IOException {
     List<Map<String, String>> rows = loadStorages();
-    rows.sort(Comparator
-        .comparingInt((Map<String, String> row) -> orderOf(row))
-        .thenComparing(row -> clean(row.get("Id")), String.CASE_INSENSITIVE_ORDER));
+    rows.sort(STORAGE_ORDER);
     List<Map<String, String>> collection = loadCollection();
     List<Map<String, Object>> result = new ArrayList<>();
     for (Map<String, String> row : rows) {
@@ -176,7 +178,7 @@ public class PartStorageService {
     MatchContext context = cleaned.isEmpty() ? null : match(data, cleaned);
     List<Map<String, String>> storages = loadStorages();
     List<Map<String, String>> collection = loadCollection();
-    storages.sort(Comparator.comparing(row -> clean(row.get("Id")), String.CASE_INSENSITIVE_ORDER));
+    storages.sort(STORAGE_ORDER);
 
     List<Map<String, Object>> result = new ArrayList<>();
     for (Map<String, String> storage : storages) {

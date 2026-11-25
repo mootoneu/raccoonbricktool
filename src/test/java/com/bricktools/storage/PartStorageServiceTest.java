@@ -211,6 +211,23 @@ class PartStorageServiceTest {
   }
 
   @Test
+  void storagesAndDrawersUseTheSameOrder() throws IOException {
+    service.createStorage(new PartStorageRequest("Z", "First", 1, "", "", 0));
+    service.createStorage(new PartStorageRequest("A", "Second", 1, "", "", 1));
+
+    List<String> storageOrder = service.storages().stream()
+        .map(row -> (String) row.get("id"))
+        .toList();
+    List<String> drawerOrder = service.drawers("").stream()
+        .map(row -> (String) row.get("storageId"))
+        .distinct()
+        .toList();
+
+    assertThat(storageOrder).containsExactly("Z", "A");
+    assertThat(drawerOrder).containsExactly("Z", "A");
+  }
+
+  @Test
   void drawerLabelsAreValidatedAndLimitedTo52() throws IOException {
     service.createStorage(new PartStorageRequest("A", "Cabinet", 52, "", "", 0));
 
