@@ -34,14 +34,12 @@ import com.bricktools.wishlist.NewSetService;
 import com.bricktools.wishlist.WishlistRequest;
 import com.bricktools.wishlist.WishlistService;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
@@ -161,13 +159,7 @@ public class ApiController {
   public ResponseEntity<Resource> setImage(
       @Parameter(name = "setNumber", description = "Lego set number") @PathVariable String setNumber)
       throws IOException {
-    Optional<Path> image = setImages.find(setNumber);
-    if (image.isEmpty()) {
-      return ResponseEntity.notFound().build();
-    }
-    return ResponseEntity.ok()
-        .contentType(MediaType.parseMediaType(setImages.contentType(image.get())))
-        .body(setImages.resource(image.get()));
+    return ImageResponse.of(setImages.find(setNumber), setImages::contentType, setImages::resource);
   }
 
   /**
@@ -183,13 +175,7 @@ public class ApiController {
   public ResponseEntity<Resource> themeImage(
       @Parameter(name = "imageName", description = "Internal name of the theme image") @PathVariable String imageName)
       throws IOException {
-    Optional<Path> image = themeImages.find(imageName);
-    if (image.isEmpty()) {
-      return ResponseEntity.notFound().build();
-    }
-    return ResponseEntity.ok()
-        .contentType(MediaType.parseMediaType(themeImages.contentType(image.get())))
-        .body(themeImages.resource(image.get()));
+    return ImageResponse.of(themeImages.find(imageName), themeImages::contentType, themeImages::resource);
   }
 
   /**
@@ -205,13 +191,7 @@ public class ApiController {
   public ResponseEntity<Resource> vendorImage(
       @Parameter(name = "imageName", description = "Internal name of the vendor image") @PathVariable String imageName)
       throws IOException {
-    Optional<Path> image = otherImages.find("vendor", imageName);
-    if (image.isEmpty()) {
-      return ResponseEntity.notFound().build();
-    }
-    return ResponseEntity.ok()
-        .contentType(MediaType.parseMediaType(otherImages.contentType(image.get())))
-        .body(otherImages.resource(image.get()));
+    return ImageResponse.of(otherImages.find("vendor", imageName), otherImages::contentType, otherImages::resource);
   }
 
   /**
@@ -227,17 +207,7 @@ public class ApiController {
   public ResponseEntity<Resource> peopleImage(
       @Parameter(name = "imageName", description = "Internal name of the people image") @PathVariable String imageName)
       throws IOException {
-    return otherImage("people", imageName);
-  }
-
-  private ResponseEntity<Resource> otherImage(String category, String imageName) {
-    Optional<Path> image = otherImages.find(category, imageName);
-    if (image.isEmpty()) {
-      return ResponseEntity.notFound().build();
-    }
-    return ResponseEntity.ok()
-        .contentType(MediaType.parseMediaType(otherImages.contentType(image.get())))
-        .body(otherImages.resource(image.get()));
+    return ImageResponse.of(otherImages.find("people", imageName), otherImages::contentType, otherImages::resource);
   }
 
   /**
@@ -887,13 +857,8 @@ public class ApiController {
       @Parameter(name = "colorId", description = "Lego color ID; the first available color is used when omitted")
       @RequestParam(required = false) Integer colorId)
       throws IOException, InterruptedException {
-    Optional<Path> image = partImages.ensureWithFallback(partNumber, colorId);
-    if (image.isEmpty()) {
-      return ResponseEntity.notFound().build();
-    }
-    return ResponseEntity.ok()
-        .contentType(MediaType.parseMediaType(partImages.contentType(image.get())))
-        .body(partImages.resource(image.get()));
+    return ImageResponse.of(partImages.ensureWithFallback(partNumber, colorId),
+        partImages::contentType, partImages::resource);
   }
 
   @GetMapping(path = "/parts/items/{itemNumber}/image", produces = "image/*")
@@ -908,13 +873,7 @@ public class ApiController {
       @Parameter(name = "itemNumber", description = "Lego item number (element id)")
       @PathVariable String itemNumber)
       throws IOException, InterruptedException {
-    Optional<Path> image = partImages.ensureByItemNumber(itemNumber);
-    if (image.isEmpty()) {
-      return ResponseEntity.notFound().build();
-    }
-    return ResponseEntity.ok()
-        .contentType(MediaType.parseMediaType(partImages.contentType(image.get())))
-        .body(partImages.resource(image.get()));
+    return ImageResponse.of(partImages.ensureByItemNumber(itemNumber), partImages::contentType, partImages::resource);
   }
 
   // ==========================================================================
