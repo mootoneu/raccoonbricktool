@@ -239,13 +239,13 @@
     }
 
     $('#app-header').on('click', '.active-container-prev', function () {
-      stepActiveDrawer(-1);
+      BrickTools.stepActiveDrawer(-1);
     });
     $('#app-header').on('click', '.active-container-next', function () {
-      stepActiveDrawer(1);
+      BrickTools.stepActiveDrawer(1);
     });
     $('#app-header').on('click', '.active-container-clear', function () {
-      setActiveContainer(null);
+      BrickTools.setActiveContainer(null);
     });
 
     $('#app-header .bell').on('click', function (e) {
@@ -256,7 +256,7 @@
       $('#app-header .dropdown').prop('hidden', true);
     });
 
-    renderActiveContainer();
+    BrickTools.renderActiveContainer();
     loadNotifications();
     setInterval(loadNotifications, 5 * 60 * 1000);
   }

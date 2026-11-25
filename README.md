@@ -155,7 +155,10 @@ Never place a `.env` file under `src/main/resources`: Maven copies that director
 - Build: `mvn -B package`
 - Run the tests: `mvn -B test`
 - Run the application: `mvn spring-boot:run`
-- Check a JavaScript file: `node --check path/to/file.js`
+- Check Java style: `mvn validate` (Checkstyle rules in `config/checkstyle/checkstyle.xml`; editor settings in `.editorconfig`)
+- Lint the frontend: `npm install` once, then `npm run lint` (ESLint configuration in `eslint.config.js`)
+- Run the frontend unit tests: `npm test`
+- Check a single JavaScript file: `node --check path/to/file.js`
 
 Storage concerns are split into `StorageService` (storages), `CollectionRuleService` (rules and adding parts), `DrawerService` (expansion and search) and `PartCatalogService` (stamp-based catalogue cache). `PartStorageService` is a thin compatibility facade; new code should use the focused services directly. Chip view models are built by `CollectionChips`.
 

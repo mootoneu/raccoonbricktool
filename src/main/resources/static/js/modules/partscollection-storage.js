@@ -322,10 +322,6 @@
       storageId, drawer, drawerCards.concat(collectionCards));
   }
 
-  function drawerList() {
-    return BrickTools.PartsCollectionDrawers.list(drawerCards);
-  }
-
   function setActiveDrawer(card) {
     BrickTools.PartsCollectionDrawers.setActive(card, drawerContext());
   }
@@ -344,16 +340,11 @@
 
   // Pure collection helpers now live in partscollection-collection-utils.js.
   const collectionTokens = BrickTools.CollectionUtils.collectionTokens;
-  const matchesCollectionQuery = BrickTools.CollectionUtils.matchesCollectionQuery;
-  const normalizeSizeText = BrickTools.CollectionUtils.normalizeSizeText;
-  const sizeDimensions = BrickTools.CollectionUtils.sizeDimensions;
   const parseSizeQuery = BrickTools.CollectionUtils.parseSizeQuery;
   const sizeMatches = BrickTools.CollectionUtils.sizeMatches;
   const brickOwlMatches = BrickTools.CollectionUtils.brickOwlMatches;
   const pabMatches = BrickTools.CollectionUtils.pabMatches;
-  const brickOwlName = BrickTools.CollectionUtils.brickOwlName;
   const sortedBrickOwlParts = BrickTools.CollectionUtils.sortedBrickOwlParts;
-  const collapsePabParts = BrickTools.CollectionUtils.collapsePabParts;
   const sortedPabParts = BrickTools.CollectionUtils.sortedPabParts;
 
   function resetCollectionResults() {
@@ -560,6 +551,11 @@
   // ============================================================================
   // Drawer content helpers
   // ============================================================================
+
+  const splitRuleTokens = BrickTools.CollectionUtils.splitRuleTokens;
+  const tokenKey = BrickTools.CollectionUtils.tokenKey;
+  const canonicalColorToken = BrickTools.CollectionUtils.canonicalColorToken;
+  const uniqueRuleTokens = BrickTools.CollectionUtils.uniqueRuleTokens;
 
   function getRulePartTokens() {
     return splitRuleTokens($('#collection-rule-parts').val());

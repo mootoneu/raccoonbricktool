@@ -108,6 +108,8 @@ Data tables follow the same conventions:
 - Empty results show a single muted row explaining why (no data or no match).
 - Row actions are placed in the last column (`actions-col` / `row-actions`). They are compact icon-only buttons with a tooltip and an accessible label.
 
+The frontend deliberately keeps the `BrickTools` global namespace and classic script tags rather than native ES modules: the modules depend on globals supplied by jQuery, `color.js` and each other in a fixed load order. Moving to `type="module"` would require rewriting every module and every page's script tags at once; it is deferred until a bundler or a full module migration is worthwhile.
+
 The shared scripts are split by concern: `js/common.js` keeps formatting, icons, the API client, the header and tabs, `js/active-container.js` owns the active container, and `js/shared/table.js` owns sorting and color chips. All pages load them in that order. Styles are split into `css/base.css`, `css/components.css` and `css/responsive.css`.
 
 Sorting, status messages, color normalization and color chips are implemented once in `js/shared/table.js` (`BrickTools.Shared`). The BrickOwl and Parts Collection modules delegate to it, so their tables and color chips behave identically; only collection-specific helpers (for example sorting by order count) remain in the page modules.

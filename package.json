@@ -1,0 +1,13 @@
+{
+  "name": "raccoon-brick-tools-static",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lint and test tooling for the plain-JavaScript frontend",
+  "scripts": {
+    "lint": "eslint src/main/resources/static/js",
+    "test": "node --test src/test/js"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0"
+  }
+}
