@@ -10,14 +10,17 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import org.slf4j.Logger;
@@ -112,18 +115,51 @@ public class RebrickableService {
     return last == null || last.plusMonths(1).isBefore(LocalDate.now());
   }
 
+  /**
+   * Extracts into a staging directory next to the data directory first. A truncated or corrupt archive therefore
+   * cannot leave a mix of old and new CSV files: the live files are only replaced after extraction completes.
+   */
   private void extract(Path zip) throws IOException {
-    Files.createDirectories(dataDir);
-    try (ZipInputStream in = new ZipInputStream(Files.newInputStream(zip))) {
-      ZipEntry entry;
-      while ((entry = in.getNextEntry()) != null) {
-        if (entry.isDirectory()) {
-          continue;
+    Path staging = Files.createTempDirectory(dataDir.toAbsolutePath().getParent(), "rebrickable-");
+    try {
+      try (ZipInputStream in = new ZipInputStream(Files.newInputStream(zip))) {
+        ZipEntry entry;
+        while ((entry = in.getNextEntry()) != null) {
+          if (entry.isDirectory()) {
+            continue;
+          }
+          String name = Path.of(entry.getName()).getFileName().toString();
+          if (name.endsWith(".csv")) {
+            Files.copy(in, staging.resolve(name));
+          }
         }
-        String name = Path.of(entry.getName()).getFileName().toString();
-        if (name.endsWith(".csv")) {
-          Files.copy(in, dataDir.resolve(name), StandardCopyOption.REPLACE_EXISTING);
+      }
+      Files.createDirectories(dataDir);
+      try (Stream<Path> files = Files.list(staging)) {
+        for (Path file : files.toList()) {
+          moveAtomically(file, dataDir.resolve(file.getFileName()));
         }
+      }
+    } finally {
+      deleteRecursively(staging);
+    }
+  }
+
+  private static void moveAtomically(Path source, Path target) throws IOException {
+    try {
+      Files.move(source, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+    } catch (AtomicMoveNotSupportedException e) {
+      Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+    }
+  }
+
+  private static void deleteRecursively(Path directory) throws IOException {
+    if (!Files.exists(directory)) {
+      return;
+    }
+    try (Stream<Path> paths = Files.walk(directory)) {
+      for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) {
+        Files.deleteIfExists(path);
       }
     }
   }

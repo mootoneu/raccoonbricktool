@@ -11,12 +11,14 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -202,6 +204,25 @@ class RebrickableServiceTest {
     } finally {
       release.countDown();
       executor.shutdownNow();
+    }
+  }
+
+  @Test
+  void corruptArchiveLeavesExistingCsvFilesUntouched() throws IOException {
+    Files.createDirectories(dir.resolve("re"));
+    Files.writeString(dir.resolve("re/sets.csv"), "set_num,name\nold\n");
+    byte[] zip = TestHttpServer.zip(Map.of(
+        "sets.csv", "set_num,name\nnew\n",
+        "themes.csv", "id,name\n1,Theme\n"));
+    server.respond("/rebrickable.zip", "application/zip", Arrays.copyOf(zip, zip.length / 2));
+
+    assertThatThrownBy(service()::update).isInstanceOf(IOException.class);
+
+    assertThat(Files.readString(dir.resolve("re/sets.csv"))).contains("old").doesNotContain("new");
+    assertThat(Files.exists(dir.resolve("re/themes.csv"))).isFalse();
+    assertThat(Files.exists(dir.resolve("bt/state.properties"))).isFalse();
+    try (Stream<Path> paths = Files.list(dir)) {
+      assertThat(paths).noneMatch(path -> path.getFileName().toString().startsWith("rebrickable-"));
     }
   }
 

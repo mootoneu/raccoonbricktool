@@ -42,7 +42,7 @@ The card displays:
 Behaviour:
 
 - The "Update data" button is disabled when data has already been downloaded for the day, because Rebrickable terms allow at most one download per day. The button title explains why it is disabled.
-- Clicking the button starts the download and displays a progress message; the completion message shows the download date.
+- Clicking the button starts the download and displays a progress message; the completion message shows the download date. The archive is extracted to a staging directory and its CSV files are moved into `data/re/` only after extraction succeeds, so a corrupt download cannot leave a mix of old and new files. While the download runs, the status card stays responsive.
 - When data is older than a month, a notification reminds the user to perform the update. The check runs at server startup and then once a day.
 
 **Endpoints:**
