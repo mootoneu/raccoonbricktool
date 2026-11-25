@@ -245,6 +245,19 @@ class PartStorageServiceTest {
   }
 
   @Test
+  void addPartsTreatsBlankAmountAsOne() throws IOException {
+    service.createStorage(new PartStorageRequest("A", "Cabinet", 1, "", "", 0));
+    Files.writeString(dir.resolve("bt/part_collection.csv"),
+        "Parts,Colors,StorageId,Drawer,Amount\n3001,Any,A,a,\n");
+
+    assertThat(service.addParts("A", "a", List.of("3001"))).isEqualTo(1);
+
+    List<Map<String, Object>> rows = service.collectionRows();
+    assertThat(rows).hasSize(1);
+    assertThat(rows.get(0)).containsEntry("parts", "3001").containsEntry("amount", "2");
+  }
+
+  @Test
   void collectionValidationRejectsInvalidRows() throws IOException {
     service.createStorage(new PartStorageRequest("A", "Box", 0, "", "", 0));
     assertThatThrownBy(() -> service.createCollectionRow(

@@ -247,10 +247,10 @@ public class PartStorageService {
         }
       }
       if (existing != null) {
-        Integer amount = toInt(existing.get("Amount"));
-        if (amount != null) {
-          existing.put("Amount", String.valueOf(amount + 1));
-        }
+        // A blank amount still represents one part: incrementing nothing would silently lose the addition.
+        Integer stored = toInt(existing.get("Amount"));
+        int amount = stored == null || stored < 1 ? 1 : stored;
+        existing.put("Amount", String.valueOf(amount + 1));
         added++;
         continue;
       }

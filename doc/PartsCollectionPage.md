@@ -167,7 +167,7 @@ The form also helps to build the **Parts** and **Colors** lists. The helper cont
 - **Colors** offers `Any`, `Other`, and `Decorated` buttons and **Add color…**, which opens the color picker. A chosen color appends its numeric id.
 - The chips below each input show the current tokens and a close icon button that removes one token. Category chips show the category name even though the id is saved. Unknown categories, part numbers, and color ids, and `Any` combined with specific color ids, are reported as non-blocking warnings.
 
-A rule is unique per storage, drawer, parts, and colors. When the same part is added several times to the same drawer with `Any` colors, its amount is incremented.
+A rule is unique per storage, drawer, parts, and colors. When the same part is added several times to the same drawer with `Any` colors, its amount is incremented. If an existing row has a blank amount, it is treated as one, so the addition is never silently lost.
 
 **Endpoints:**
 
