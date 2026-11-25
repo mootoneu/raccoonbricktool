@@ -125,6 +125,7 @@ To set up and run Brick Tools:
 
 Configuration is in `src/main/resources/application.yml`:
 
+- `server.address` - bind address (default `127.0.0.1`). The API has no authentication and can trigger downloads and file writes, so it is reachable from the local machine only unless you explicitly set `BRICKTOOLS_SERVER_ADDRESS` on a trusted network (and preferably add authentication).
 - `server.port` - HTTP port (default `8780`).
 - `bricktools.data-dir` - CSV data directory (default `./data`).
 - `bricktools.rebrickable.download-url` - Rebrickable download archive.

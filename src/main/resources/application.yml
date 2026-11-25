@@ -1,4 +1,7 @@
 server:
+  # Bind to loopback by default: the API can trigger downloads and file writes and has no authentication.
+  # Override with BRICKTOOLS_SERVER_ADDRESS only on a trusted network (or add authentication first).
+  address: ${BRICKTOOLS_SERVER_ADDRESS:127.0.0.1}
   port: 8780
 
 bricktools:
