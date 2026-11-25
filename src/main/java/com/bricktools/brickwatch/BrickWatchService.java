@@ -126,10 +126,26 @@ public class BrickWatchService {
     }
   }
 
+  /**
+   * Parses a price written with either French ({@code 1.299,99}) or English ({@code 1,299.99}) separators. When both
+   * separators occur, the rightmost one is the decimal separator and the other one is a thousands separator.
+   */
   static BigDecimal parsePrice(String text) {
-    String cleaned = text.replaceAll("[^0-9,.]", "").replace(',', '.');
+    if (text == null) {
+      return null;
+    }
+    String cleaned = text.replaceAll("[^0-9,.]", "");
     if (cleaned.isEmpty()) {
       return null;
+    }
+    int dot = cleaned.lastIndexOf('.');
+    int comma = cleaned.lastIndexOf(',');
+    if (dot >= 0 && comma >= 0) {
+      cleaned = comma > dot
+          ? cleaned.replace(".", "").replace(',', '.')
+          : cleaned.replace(",", "");
+    } else if (comma >= 0) {
+      cleaned = cleaned.replace(',', '.');
     }
     try {
       return new BigDecimal(cleaned);

@@ -71,7 +71,7 @@ The result message always shows the set number and the formatted price, together
 
 - If the price is already stored, it is returned directly.
 - Otherwise the price is scraped from `https://www.brickwatch.net/fr-FR/set/$SETNUMBER` and stored in `data.bw.SetPrice`.
-- The price is located in the table after the header "Information sur le prix", in the row starting with "Lego prix conseillé", in the last column.
+- The price is located in the table after the header "Information sur le prix", in the row starting with "Lego prix conseillé", in the last column. Both French (`1.299,99 €`) and English (`1,299.99 €`) number formats are accepted.
 - At most one request per second is made to BrickWatch to avoid being banned.
 
 ### Fetching from Brickonomics

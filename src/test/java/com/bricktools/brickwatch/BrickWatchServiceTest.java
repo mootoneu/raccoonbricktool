@@ -67,9 +67,17 @@ class BrickWatchServiceTest {
   }
 
   @Test
+  void parsesThousandsSeparatorWhenBothSeparatorsArePresent() {
+    assertThat(BrickWatchService.parsePrice("1.299,99 €")).isEqualByComparingTo("1299.99");
+    assertThat(BrickWatchService.parsePrice("1,299.99 €")).isEqualByComparingTo("1299.99");
+    assertThat(BrickWatchService.parsePrice("12.345,67")).isEqualByComparingTo("12345.67");
+  }
+
+  @Test
   void unparseablePriceIsNull() {
     assertThat(BrickWatchService.parsePrice("n/a")).isNull();
     assertThat(BrickWatchService.parsePrice("")).isNull();
+    assertThat(BrickWatchService.parsePrice(null)).isNull();
   }
 
   @Test
