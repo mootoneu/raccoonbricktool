@@ -46,7 +46,7 @@ The last visited feature page is stored in `localStorage` under `bricktools.last
 
 ## Visual Style and Icons
 
-The interface uses a LEGO-inspired palette defined in `css/app.css`:
+The interface uses a LEGO-inspired palette defined in `css/base.css`:
 
 - LEGO yellow for primary actions, LEGO blue for links, focus rings, and selected states, red for destructive actions, near-black text, and a light gray background.
 - Cards, tables, modals, and inputs share rounded corners and soft shadows.
@@ -107,6 +107,8 @@ Data tables follow the same conventions:
 - Sorting compares numbers numerically and text with `localeCompare(..., { numeric: true })`, so `2` comes before `10`.
 - Empty results show a single muted row explaining why (no data or no match).
 - Row actions are placed in the last column (`actions-col` / `row-actions`). They are compact icon-only buttons with a tooltip and an accessible label.
+
+The shared scripts are split by concern: `js/common.js` keeps formatting, icons, the API client, the header and tabs, `js/active-container.js` owns the active container, and `js/shared/table.js` owns sorting and color chips. All pages load them in that order. Styles are split into `css/base.css`, `css/components.css` and `css/responsive.css`.
 
 Sorting, status messages, color normalization and color chips are implemented once in `js/shared/table.js` (`BrickTools.Shared`). The BrickOwl and Parts Collection modules delegate to it, so their tables and color chips behave identically; only collection-specific helpers (for example sorting by order count) remain in the page modules.
 
