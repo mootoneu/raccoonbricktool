@@ -196,6 +196,19 @@ class PartStorageServiceTest {
   }
 
   @Test
+  void otherColorKeywordUsesTheIndexedExplicitColorRows() throws IOException {
+    service.createStorage(new PartStorageRequest("A", "Cabinet", 2, "", "", 0));
+    service.createCollectionRow(new PartCollectionRequest("3001", "Other", "A", "a", "1"));
+    service.createCollectionRow(new PartCollectionRequest("3001", "5", "A", "b", "1"));
+
+    // The "Other" row does not match while another row lists the part with a numeric color.
+    assertThat(service.drawers("3001")).extracting("drawer").containsExactly("b");
+
+    service.deleteCollectionRow(1);
+    assertThat(service.drawers("3001")).extracting("drawer").containsExactly("a");
+  }
+
+  @Test
   void drawerLabelsUseLowercaseThenUppercaseAndStopAt52() throws IOException {
     service.createStorage(new PartStorageRequest("A", "Cabinet", 52, "", "", 0));
 

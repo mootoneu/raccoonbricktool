@@ -7,9 +7,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -175,29 +177,25 @@ public class PartStorageService {
   public synchronized List<Map<String, Object>> drawers(String query) throws IOException {
     Catalog data = catalog();
     String cleaned = clean(query);
-    MatchContext context = cleaned.isEmpty() ? null : match(data, cleaned);
     List<Map<String, String>> storages = loadStorages();
     List<Map<String, String>> collection = loadCollection();
+    MatchContext context = cleaned.isEmpty() ? null : match(data, cleaned, collection);
+    Map<String, List<Integer>> rowsByDrawer = indexRowsByDrawer(collection);
     storages.sort(STORAGE_ORDER);
 
     List<Map<String, Object>> result = new ArrayList<>();
     for (Map<String, String> storage : storages) {
       String storageId = clean(storage.get("Id"));
       for (String drawer : drawerLabels(storage, collection)) {
-        List<Integer> indexes = new ArrayList<>();
-        List<Map<String, String>> rows = new ArrayList<>();
-        for (int i = 0; i < collection.size(); i++) {
-          Map<String, String> row = collection.get(i);
-          if (clean(row.get("StorageId")).equalsIgnoreCase(storageId)
-              && clean(row.get("Drawer")).equals(drawer)) {
-            indexes.add(i);
-            rows.add(row);
-          }
+        List<Integer> indexes = rowsByDrawer.getOrDefault(drawerKey(storageId, drawer), List.of());
+        List<Map<String, String>> rows = new ArrayList<>(indexes.size());
+        for (int index : indexes) {
+          rows.add(collection.get(index));
         }
 
         List<Map<String, Object>> matched = new ArrayList<>();
         if (context != null) {
-          matched = matchedParts(data, collection, rows, context);
+          matched = matchedParts(data, rows, context);
           if (matched.isEmpty()) {
             continue;
           }
@@ -368,7 +366,26 @@ public class PartStorageService {
     return stamp;
   }
 
-  private MatchContext match(Catalog data, String query) {
+  /** Groups collection rows by storage and drawer once per request instead of rescanning them for every drawer. */
+  private static Map<String, List<Integer>> indexRowsByDrawer(List<Map<String, String>> collection) {
+    Map<String, List<Integer>> index = new HashMap<>();
+    for (int i = 0; i < collection.size(); i++) {
+      Map<String, String> row = collection.get(i);
+      String key = drawerKey(clean(row.get("StorageId")), clean(row.get("Drawer")));
+      index.computeIfAbsent(key, ignored -> new ArrayList<>()).add(i);
+    }
+    return index;
+  }
+
+  private static String drawerKey(String storageId, String drawer) {
+    return storageId.toLowerCase(Locale.ROOT) + "\u0000" + drawer;
+  }
+
+  /**
+   * Finds the parts matching the query and indexes, for each of them, the collection rows that explicitly list a
+   * color. Building this once avoids rescanning every collection row for every drawer and every candidate part.
+   */
+  private MatchContext match(Catalog data, String query, List<Map<String, String>> allRows) {
     String needle = query.toLowerCase(Locale.ROOT);
     Set<String> colorIds = new LinkedHashSet<>();
     for (ColorInfo color : data.colors.values()) {
@@ -403,11 +420,33 @@ public class PartStorageService {
         }
       }
     }
-    return new MatchContext(numbers, colorByPart);
+    Map<String, Set<Map<String, String>>> explicitRows = new HashMap<>();
+    for (String number : numbers) {
+      PartInfo part = data.parts.get(number);
+      if (part == null || part.decorated()) {
+        continue;
+      }
+      Set<Map<String, String>> matching = Collections.newSetFromMap(new IdentityHashMap<>());
+      for (Map<String, String> row : allRows) {
+        if (partsMatch(data, row.get("Parts"), part) && hasNumericColor(row.get("Colors"))) {
+          matching.add(row);
+        }
+      }
+      explicitRows.put(number, matching);
+    }
+    return new MatchContext(numbers, colorByPart, explicitRows);
   }
 
-  private List<Map<String, Object>> matchedParts(Catalog data, List<Map<String, String>> allRows,
-                                                 List<Map<String, String>> rows, MatchContext context) {
+  private static boolean hasNumericColor(String value) {
+    for (String token : split(value)) {
+      if (isNumeric(token)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private List<Map<String, Object>> matchedParts(Catalog data, List<Map<String, String>> rows, MatchContext context) {
     List<Map<String, Object>> result = new ArrayList<>();
     Set<String> seen = new HashSet<>();
     for (String number : context.numbers()) {
@@ -419,7 +458,7 @@ public class PartStorageService {
         continue;
       }
       for (Map<String, String> row : rows) {
-        if (!matchesRow(data, allRows, row, part, context.colorByPart().get(number))) {
+        if (!matchesRow(data, row, part, context.colorByPart().get(number), context)) {
           continue;
         }
         String queryColor = context.colorByPart().get(number);
@@ -434,15 +473,15 @@ public class PartStorageService {
     return result;
   }
 
-  private boolean matchesRow(Catalog data, List<Map<String, String>> allRows, Map<String, String> row,
-                             PartInfo part, String requiredColor) {
+  private boolean matchesRow(Catalog data, Map<String, String> row, PartInfo part, String requiredColor,
+                             MatchContext context) {
     if (!partsMatch(data, row.get("Parts"), part)) {
       return false;
     }
     if (requiredColor != null && !colorsOf(data, part).contains(requiredColor)) {
       return false;
     }
-    return colorsMatch(data, allRows, row, part);
+    return colorsMatch(data, row, part, context);
   }
 
   private boolean partsMatch(Catalog data, String value, PartInfo part) {
@@ -479,8 +518,7 @@ public class PartStorageService {
             && entry.getValue().equalsIgnoreCase(category));
   }
 
-  private boolean colorsMatch(Catalog data, List<Map<String, String>> allRows, Map<String, String> row,
-                              PartInfo part) {
+  private boolean colorsMatch(Catalog data, Map<String, String> row, PartInfo part, MatchContext context) {
     List<String> tokens = split(row.get("Colors"));
     if (tokens.isEmpty()) {
       return false;
@@ -494,7 +532,7 @@ public class PartStorageService {
           return true;
         }
       } else if (token.equalsIgnoreCase("Other")) {
-        if (!part.decorated() && !explicitlyListed(data, allRows, row, part)) {
+        if (!part.decorated() && !explicitlyListed(part, row, context)) {
           return true;
         }
       } else if (colorsOf(data, part).contains(token)) {
@@ -504,16 +542,11 @@ public class PartStorageService {
     return false;
   }
 
-  private boolean explicitlyListed(Catalog data, List<Map<String, String>> allRows,
-                                   Map<String, String> current, PartInfo part) {
-    for (Map<String, String> row : allRows) {
-      if (row == current || !partsMatch(data, row.get("Parts"), part)) {
-        continue;
-      }
-      for (String token : split(row.get("Colors"))) {
-        if (isNumeric(token)) {
-          return true;
-        }
+  /** Uses the per-request index instead of rescanning the whole collection for every candidate part and row. */
+  private boolean explicitlyListed(PartInfo part, Map<String, String> current, MatchContext context) {
+    for (Map<String, String> row : context.explicitRows().getOrDefault(part.number(), Set.of())) {
+      if (row != current) {
+        return true;
       }
     }
     return false;
@@ -963,7 +996,8 @@ public class PartStorageService {
   private record ColorInfo(String id, String name, String rgb) {
   }
 
-  private record MatchContext(Set<String> numbers, Map<String, String> colorByPart) {
+  private record MatchContext(Set<String> numbers, Map<String, String> colorByPart,
+                              Map<String, Set<Map<String, String>>> explicitRows) {
   }
 
   private static final class Catalog {

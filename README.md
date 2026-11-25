@@ -161,6 +161,8 @@ The backend keeps slow work (downloads, network scraping, throttling sleeps) out
 
 CSV writes are coordinated by a registry of per-file locks (`FileLocks`), because several services write the same file (notably `bw/setprices.csv`). `Csv.write` also uses a unique temporary file in the target directory, so concurrent writers cannot clobber one another. Use `FileLocks.call` for read-modify-write sequences.
 
+The catalog is cached against the timestamps and sizes of its source files. Within a drawer search, collection rows are indexed by storage and drawer and parts with explicit colors are indexed once, rather than rescanned for every drawer and candidate part.
+
 The frontend is plain JavaScript served from `src/main/resources/static`. There is no build step for the static assets; restart or repackage the application after changing them.
 
 ## Contributing
