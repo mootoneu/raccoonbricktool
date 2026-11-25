@@ -262,6 +262,8 @@ The default color is stored in `data/bt/part_default_color.csv` and is used by `
 
 The modal is implemented once in `js/modules/part-info.js` (`BrickTools.PartInfo`) and reused by every page that renders part images.
 
+The storage tab's code is split into focused modules: `partscollection-drawers.js` renders drawer cards, `partscollection-labels.js` builds the printable label sheet, and `partscollection-collection-utils.js` holds the pure search and rule-token helpers. `partscollection-storage.js` keeps the storage/collection state and wires the events.
+
 ## Endpoints
 
 | Endpoint | Purpose |

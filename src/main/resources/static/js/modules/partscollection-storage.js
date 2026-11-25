@@ -269,456 +269,69 @@
   }
 
   // ============================================================================
-  // Label export
+  // Label export (delegates to partscollection-labels.js)
   // ============================================================================
 
-  const DEFAULT_LABEL_SIZE = { width: 60, height: 10 };
-  const LABEL_SIZE_PATTERN = /^\s*(\d+(?:[.,]\d+)?)\s*[x\u00d7*]\s*(\d+(?:[.,]\d+)?)\s*$/i;
-
-  /**
-   * Parse a storage LabelSize (`<width>x<height>` in millimeters). Invalid or missing values
-   * fall back to the default 60x10 label.
-   */
-  function parseLabelSize(value) {
-    const match = LABEL_SIZE_PATTERN.exec(String(value == null ? '' : value));
-    if (!match) {
-      return { width: DEFAULT_LABEL_SIZE.width, height: DEFAULT_LABEL_SIZE.height };
-    }
-    const width = Number(match[1].replace(',', '.'));
-    const height = Number(match[2].replace(',', '.'));
-    if (!isFinite(width) || !isFinite(height) || width <= 0 || height <= 0) {
-      return { width: DEFAULT_LABEL_SIZE.width, height: DEFAULT_LABEL_SIZE.height };
-    }
-    return { width: width, height: height };
-  }
-
-  function labelPartText(row) {
-    const parts = [];
-    (Array.isArray(row.partChips) ? row.partChips : []).forEach(function (part) {
-      if (part.partNumber) {
-        parts.push(String(part.partNumber));
-      }
-    });
-    (Array.isArray(row.categoryChips) ? row.categoryChips : []).forEach(function (category) {
-      parts.push('§ ' + (category.name || category.value || ''));
-    });
-    (Array.isArray(row.tagChips) ? row.tagChips : []).forEach(function (tag) {
-      parts.push('#' + tag);
-    });
-    return parts.length > 0 ? parts.join(', ') : String(row.parts || '');
-  }
-
-  function labelColorText(row) {
-    const names = (Array.isArray(row.colorChips) ? row.colorChips : [])
-      .map(function (color) { return color.name || ''; })
-      .filter(function (name) { return name !== ''; });
-    return names.length > 0 ? names.join(', ') : String(row.colors || '');
-  }
-
-  /**
-   * Returns the first part with an image of the drawer content rules.
-   */
-  function firstLabelPart(card) {
-    const rows = Array.isArray(card.rows) ? card.rows : [];
-    for (let i = 0; i < rows.length; i++) {
-      const chips = Array.isArray(rows[i].partChips) ? rows[i].partChips : [];
-      for (let j = 0; j < chips.length; j++) {
-        if (chips[j].partNumber) {
-          return chips[j];
-        }
-      }
-    }
-    return null;
-  }
-
-  function labelPartImageSrc(part) {
-    const colorId = part.colorId == null || part.colorId === '' ? '' : part.colorId;
-    return '/api/parts/' + encodeURIComponent(part.partNumber) + '/image'
-      + (colorId === '' ? '' : '?colorId=' + encodeURIComponent(colorId));
-  }
-
-  function drawerLabelHtml(card, storage) {
-    const esc = BrickTools.esc;
-    const size = parseLabelSize(storage ? storage.labelSize : '');
-    const fontSize = Math.round(Math.max(1.6, Math.min(3.4, size.height * 0.18)) * 100) / 100;
-    const rows = Array.isArray(card.rows) ? card.rows : [];
-    const part = firstLabelPart(card);
-    let content = rows.map(function (row) {
-      const meta = [labelColorText(row), row.amount].filter(Boolean).join(' · ');
-      return '<div class="label-rule">'
-        + '<span class="label-rule-parts">' + esc(labelPartText(row)) + '</span>'
-        + (meta ? '<span class="label-rule-meta"> ' + esc(meta) + '</span>' : '')
-        + '</div>';
-    }).join('');
-    if (!content) {
-      content = '<span class="label-empty">Empty drawer</span>';
-    }
-    return '<div class="drawer-label" style="width:' + size.width + 'mm;height:' + size.height
-      + 'mm;font-size:' + fontSize + 'mm">'
-      + '<div class="label-image">'
-      + (part ? '<img src="' + esc(labelPartImageSrc(part))
-        + '" alt="" onerror="this.style.display=\'none\'">' : '')
-      + '</div>'
-      + '<div class="label-body">' + content + '</div>'
-      + '<div class="label-id">'
-      + '<span class="label-storage">' + esc(card.storageId || '') + '</span>'
-      + (card.drawer ? '<span class="label-drawer">' + esc(card.drawer) + '</span>' : '')
-      + '</div>'
-      + '</div>';
-  }
-
-  function labelSheetCss() {
-    return `
-@page { size: A4 portrait; margin: 8mm; }
-* { box-sizing: border-box; }
-html, body { margin: 0; }
-body { background: #f3f4f6; color: #111827;
-  font-family: "Segoe UI", system-ui, -apple-system, sans-serif; }
-.label-toolbar { display: flex; align-items: center; gap: 12px;
-  padding: 10px 14px; background: #fff; border-bottom: 1px solid #d1d5db; font-size: 14px; }
-.label-toolbar span { margin-right: auto; color: #4b5563; }
-.label-toolbar button { font: inherit; padding: 6px 14px; border-radius: 6px;
-  border: 1px solid #006cb7; background: #006cb7; color: #fff; cursor: pointer; }
-.label-toolbar button.secondary { background: #fff; color: #006cb7; }
-.label-sheet { display: flex; flex-wrap: wrap; align-content: flex-start;
-  gap: 2mm; width: 194mm; margin: 8mm auto; }
-.drawer-label { display: flex; align-items: stretch; overflow: hidden;
-  border: .25mm solid #9ca3af; border-radius: .6mm; background: #fff;
-  break-inside: avoid; page-break-inside: avoid; }
-.label-image { flex: 0 0 30%; display: flex; align-items: center;
-  justify-content: center; padding: .6mm; }
-.label-image img { max-width: 100%; max-height: 100%; object-fit: contain; }
-.label-body { flex: 0 0 50%; display: flex; flex-direction: column;
-  justify-content: center; gap: .2mm; padding: .4mm .8mm; overflow: hidden; line-height: 1.15; }
-.label-rule { overflow: hidden; overflow-wrap: anywhere; }
-.label-rule-parts { font-weight: 600; }
-.label-rule-meta { color: #4b5563; }
-.label-empty, .label-empty-sheet { color: #6b7280; }
-.label-empty-sheet { padding: 16px; }
-.label-id { flex: 0 0 20%; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; padding: .3mm;
-  border-left: .25mm solid #e5e7eb; overflow: hidden; }
-.label-storage { font-size: 1.5em; font-weight: 700; line-height: 1.05;
-  text-align: center; word-break: break-all; }
-.label-drawer { font-size: .85em; color: #4b5563; line-height: 1; }
-@media print {
-  body { background: #fff; }
-  .label-toolbar { display: none; }
-  .label-sheet { width: auto; margin: 0; gap: 2mm; }
-  .drawer-label { border: .25mm dashed #9ca3af; border-radius: 0; }
-}`;
-  }
-
-  function writeLabelSheet(win, ids) {
-    const selected = new Set((ids || []).map(String));
-    const entries = [];
-    storages.forEach(function (storage) {
-      if (!selected.has(String(storage.id))) {
-        return;
-      }
-      drawerCards.forEach(function (card) {
-        if (String(card.storageId) === String(storage.id)) {
-          entries.push({ card: card, storage: storage });
-        }
-      });
-    });
-
-    const labels = entries.map(function (entry) {
-      return drawerLabelHtml(entry.card, entry.storage);
-    });
-    const sheet = labels.length > 0
-      ? '<div class="label-sheet">' + labels.join('') + '</div>'
-      : '<p class="label-empty-sheet">No drawer to label for the selected storage(s).</p>';
-    const doc = '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
-      + '<title>Drawer labels</title><style>' + labelSheetCss() + '</style></head><body>'
-      + '<div class="label-toolbar"><span>' + BrickTools.fmt.number(labels.length)
-      + ' label(s) · A4</span>'
-      + '<button type="button" id="label-print">Print</button>'
-      + '<button type="button" id="label-close" class="secondary">Close</button></div>'
-      + sheet
-      + '</body></html>';
-
-    win.document.open();
-    win.document.write(doc);
-    win.document.close();
-    const printButton = win.document.getElementById('label-print');
-    if (printButton) {
-      printButton.onclick = function () {
-        win.focus();
-        win.print();
-      };
-    }
-    const closeButton = win.document.getElementById('label-close');
-    if (closeButton) {
-      closeButton.onclick = function () {
-        win.close();
-      };
-    }
-    win.focus();
-  }
-
-  /**
-   * Opens a printable A4 sheet with one label per drawer of the selected storages.
-   */
   function exportLabels() {
-    const ids = storageSelection ? storageSelection.getSelectedIds() : [];
-    if (ids.length === 0) {
-      BrickTools.PartsCollectionShared.report('#storage-msg',
-        'Select at least one storage to export its labels.');
-      return;
-    }
-    // Open the window before the request so pop-up blockers accept it.
-    const win = window.open('', '_blank');
-    if (!win) {
-      BrickTools.PartsCollectionShared.report('#storage-msg',
-        'The label sheet could not be opened; allow pop-ups for this page.');
-      return;
-    }
-    win.document.write('<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
-      + '<title>Drawer labels</title></head><body><p>Preparing labels…</p></body></html>');
-    win.document.close();
-    const render = function () {
-      writeLabelSheet(win, ids);
-    };
-    if (drawersLoaded) {
-      render();
-    } else {
-      loadDrawers(render);
-    }
+    BrickTools.PartsCollectionLabels.exportLabels({
+      storages: storages,
+      drawerCards: drawerCards,
+      drawersLoaded: drawersLoaded,
+      loadDrawers: loadDrawers,
+      storageSelection: storageSelection,
+      report: function (text) {
+        BrickTools.PartsCollectionShared.report('#storage-msg', text);
+      }
+    });
   }
 
   // ============================================================================
-  // Drawers
+  // Drawers (rendering delegated to partscollection-drawers.js)
   // ============================================================================
+
+  function drawerContext() {
+    return {
+      get storageId() { return drawersStorageId; },
+      set storageId(value) { drawersStorageId = value; },
+      get filter() { return drawersFilter; },
+      get drawerCards() { return drawerCards; },
+      get storages() { return storages; },
+      get loaded() { return drawersLoaded; },
+      get loading() { return drawersLoading; },
+      load: loadDrawers,
+      report: function (text) {
+        BrickTools.PartsCollectionShared.report('#drawers-msg', text);
+      }
+    };
+  }
 
   function renderDrawers() {
-    const selectedId = String(drawersStorageId || $('#drawers-storage').val() || '');
-    const storageCards = selectedId ? drawerCards.filter(function (card) {
-      return String(card.storageId) === selectedId;
-    }) : [];
-    const filter = drawersFilter.trim().toLowerCase();
-    const cards = storageCards.filter(function (card) {
-      if (!filter) {
-        return true;
-      }
-      return [card.storageId, card.storageModel, card.storageLocation, card.drawer]
-        .some(function (value) {
-          return String(value || '').toLowerCase().indexOf(filter) !== -1;
-        });
-    });
-    $('#drawers-count').text(storageCards.length === 0 ? '' :
-      BrickTools.fmt.number(cards.length) + ' of ' + BrickTools.fmt.number(storageCards.length)
-        + ' drawer(s)');
-    renderDrawerCards($('#drawer-cards'), cards, false);
-    if (storages.length === 0) {
-      BrickTools.PartsCollectionShared.report('#drawers-msg',
-        'No drawer yet. Add a part storage first.');
-    } else if (!selectedId) {
-      BrickTools.PartsCollectionShared.report('#drawers-msg', 'Select a storage.');
-    } else if (cards.length === 0 && storageCards.length > 0) {
-      BrickTools.PartsCollectionShared.report('#drawers-msg', 'No drawer matches the filter.');
-    } else if (storageCards.length === 0) {
-      BrickTools.PartsCollectionShared.report('#drawers-msg', 'No drawer for this storage.');
-    } else {
-      BrickTools.PartsCollectionShared.report('#drawers-msg', '');
-    }
+    BrickTools.PartsCollectionDrawers.render(drawerContext());
   }
 
   function populateDrawersStorageSelect() {
-    const $select = $('#drawers-storage');
-    const current = String(drawersStorageId || $select.val() || '');
-    $select.empty();
-    if (storages.length === 0) {
-      drawersStorageId = '';
-      $select.append($('<option></option>').attr('value', '').text('No storage'));
-      $select.prop('disabled', true);
-      return;
-    }
-    $select.prop('disabled', false);
-    storages.forEach(function (storage) {
-      const label = storage.model ? storage.id + ' (' + storage.model + ')' : storage.id;
-      $select.append($('<option></option>').attr('value', storage.id).text(label));
-    });
-    const selected = storages.find(function (storage) {
-      return String(storage.id) === current;
-    });
-    drawersStorageId = selected ? String(selected.id) : String(storages[0].id);
-    $select.val(drawersStorageId);
+    BrickTools.PartsCollectionDrawers.populateSelect(drawerContext());
   }
 
   function renderDrawerCards($host, cards, searching) {
-    $host.empty();
-    if (cards.length === 0) {
-      return;
-    }
-    const active = BrickTools.getActiveContainer();
-    cards.forEach(function (card) {
-      const isActive = active && active.type === 'drawer'
-        && String(active.storageId) === String(card.storageId)
-        && String(active.drawer) === String(card.drawer);
-      const $card = $('<article class="drawer-card"></article>').toggleClass('active', Boolean(isActive));
-
-      const $head = $('<div class="drawer-card-head"></div>');
-      const $titles = $('<div></div>');
-      $titles.append($('<h3 class="drawer-card-title"></h3>').text(
-        (card.storageId || '') + ' · ' + (card.drawer || '—')));
-      const sub = [card.storageModel, card.storageLocation].filter(Boolean).join(' · ');
-      if (sub) {
-        $titles.append($('<p class="drawer-card-sub"></p>').text(sub));
-      }
-      $head.append($titles);
-
-      const $actions = $('<div class="drawer-card-actions"></div>');
-      $actions.append(BrickTools.iconButton('add', 'Add content to drawer ' + (card.drawer || ''), 'secondary drawer-add-content')
-        .attr('data-storage-id', card.storageId)
-        .attr('data-drawer', card.drawer));
-      $actions.append(BrickTools.iconButton('active', 'Set drawer ' + (card.drawer || '') + ' as active', 'secondary drawer-set-active')
-        .attr('data-storage-id', card.storageId)
-        .attr('data-drawer', card.drawer));
-      $head.append($actions);
-      $card.append($head);
-
-      const $content = $('<div class="drawer-content"></div>');
-      const rows = Array.isArray(card.rows) ? card.rows : [];
-      if (rows.length === 0) {
-        $content.append($('<p class="drawer-empty"></p>').text('No content rule for this drawer.'));
-      }
-      rows.forEach(function (row) {
-        $content.append(drawerRule(row, card));
-      });
-      $card.append($content);
-
-      const matched = Array.isArray(card.matchedParts) ? card.matchedParts : [];
-      if (searching && matched.length > 0) {
-        const $matched = $('<div class="drawer-content"></div>');
-        $matched.append($('<p class="drawer-card-sub"></p>').text(
-          matched.length + ' matching part(s)'));
-        $matched.append(drawerPartList(matched));
-        $card.append($matched);
-      }
-      $host.append($card);
-    });
-  }
-
-  function drawerRule(row, card) {
-    const $rule = $('<div class="drawer-rule"></div>');
-    const $head = $('<div class="drawer-rule-head"></div>');
-    $head.append($('<span class="drawer-amount"></span>').text('Amount: ' + (row.amount || '—')));
-    const $actions = $('<div class="drawer-rule-actions"></div>');
-    $actions.append(BrickTools.iconButton('edit', 'Edit content rule', 'secondary drawer-rule-edit')
-      .attr('data-index', row.index)
-      .attr('data-storage-id', card.storageId)
-      .attr('data-drawer', card.drawer));
-    $actions.append(BrickTools.iconButton('delete', 'Delete content rule', 'danger drawer-rule-delete')
-      .attr('data-index', row.index));
-    $head.append($actions);
-    $rule.append($head);
-
-    const partChips = Array.isArray(row.partChips) ? row.partChips : [];
-    if (partChips.length > 0) {
-      $rule.append(drawerPartList(partChips));
-    }
-
-    const $chips = $('<div class="drawer-chips"></div>');
-    (row.categoryChips || []).forEach(function (category) {
-      $chips.append($('<span class="drawer-chip category"></span>').text('§ ' + (category.name || category.value)));
-    });
-    (row.tagChips || []).forEach(function (tag) {
-      $chips.append($('<span class="drawer-chip tag"></span>').text('#' + tag));
-    });
-    (row.colorChips || []).forEach(function (color) {
-      const $chip = $('<span class="drawer-chip"></span>').text(color.name || '');
-      if (color.keyword) {
-        $chip.addClass('keyword');
-      } else {
-        const hex = BrickTools.PartsCollectionShared.colorHex({ rgb: color.rgb });
-        if (hex) {
-          $chip.css({
-            'background-color': hex,
-            color: BrickTools.PartsCollectionShared.readableTextColor(hex)
-          });
-        }
-      }
-      $chips.append($chip);
-    });
-    if ($chips.children().length > 0) {
-      $rule.append($chips);
-    }
-    return $rule;
-  }
-
-  function drawerPartList(parts) {
-    const $list = $('<div class="drawer-parts"></div>');
-    parts.forEach(function (part) {
-      const $item = $('<span class="drawer-part"></span>');
-      const colorId = part.colorId == null || part.colorId === '' ? '' : part.colorId;
-      const src = '/api/parts/' + encodeURIComponent(part.partNumber) + '/image'
-        + (colorId === '' ? '' : '?colorId=' + encodeURIComponent(colorId));
-      $item.append($('<img class="part-img" loading="lazy" alt="">')
-        .attr('src', src)
-        .attr('alt', part.name || part.partNumber)
-        .attr('title', part.name || part.partNumber)
-        .attr('data-part-number', part.partNumber)
-        .attr('tabindex', '0')
-        .attr('role', 'button')
-        .attr('aria-label', 'Part information for ' + (part.name || part.partNumber))
-        .on('error', function () { $(this).prop('hidden', true); }));
-      $item.append($('<span class="drawer-part-name"></span>').text(part.name || part.partNumber));
-      $list.append($item);
-    });
-    return $list;
+    BrickTools.PartsCollectionDrawers.renderCards($host, cards, searching);
   }
 
   function findDrawer(storageId, drawer) {
-    return drawerCards.concat(collectionCards).find(function (card) {
-      return String(card.storageId) === String(storageId)
-        && String(card.drawer) === String(drawer);
-    });
+    return BrickTools.PartsCollectionDrawers.findDrawer(
+      storageId, drawer, drawerCards.concat(collectionCards));
   }
 
   function drawerList() {
-    return drawerCards.map(function (card) {
-      return {
-        storageId: card.storageId,
-        storageModel: card.storageModel,
-        storageLocation: card.storageLocation,
-        drawer: card.drawer
-      };
-    });
+    return BrickTools.PartsCollectionDrawers.list(drawerCards);
   }
 
   function setActiveDrawer(card) {
-    BrickTools.setActiveContainer({
-      type: 'drawer',
-      storageId: card.storageId,
-      storageModel: card.storageModel,
-      storageLocation: card.storageLocation,
-      drawer: card.drawer,
-      drawers: drawerList()
-    });
-    renderDrawers();
-    if (!drawersLoaded && !drawersLoading) {
-      // The header navigation needs the full drawer list of the storage.
-      loadDrawers();
-    }
-    BrickTools.PartsCollectionShared.report('#drawers-msg',
-      'Active container set to storage ' + card.storageId + ', drawer ' + (card.drawer || '—') + '.');
+    BrickTools.PartsCollectionDrawers.setActive(card, drawerContext());
   }
 
   function syncActiveDrawerList() {
-    const active = BrickTools.getActiveContainer();
-    if (!active || active.type !== 'drawer') {
-      return;
-    }
-    const list = drawerList();
-    const found = list.some(function (drawer) {
-      return String(drawer.storageId) === String(active.storageId)
-        && String(drawer.drawer) === String(active.drawer);
-    });
-    if (found) {
-      active.drawers = list;
-      BrickTools.setActiveContainer(active);
-    }
+    BrickTools.PartsCollectionDrawers.syncActive(drawerCards);
   }
 
   // ============================================================================
@@ -729,127 +342,19 @@ body { background: #f3f4f6; color: #111827;
     'size to search drawers, BrickOwl parts, and PaB parts.';
   const COLLECTION_SIZE_PROMPT = 'Enter a part size like 2x4 or 2x4x1.';
 
-  function collectionTokens(value) {
-    return String(value == null ? '' : value)
-      .toLowerCase()
-      .split(/\s+/)
-      .filter(function (token) { return token.length > 0; });
-  }
-
-  function matchesCollectionQuery(values, tokens) {
-    const haystack = values
-      .map(function (value) { return String(value == null ? '' : value); })
-      .join(' ')
-      .toLowerCase();
-    return tokens.every(function (token) { return haystack.indexOf(token) !== -1; });
-  }
-
-  function normalizeSizeText(value) {
-    return String(value == null ? '' : value)
-      .toLowerCase()
-      .replace(/[×*]/g, 'x')
-      .replace(/\s*x\s*/g, 'x')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
-  function sizeDimensions(value) {
-    const normalized = normalizeSizeText(value);
-    return normalized ? normalized.split('x').map(function (part) { return part.trim(); }) : [];
-  }
-
-  /**
-   * Parse the size filter. Returns an empty array when there is no filter, null when the text is
-   * not a size, or the entered dimensions.
-   */
-  function parseSizeQuery(value) {
-    const dimensions = sizeDimensions(value);
-    if (dimensions.length === 0) {
-      return [];
-    }
-    if (dimensions.length < 2 || dimensions.length > 3) {
-      return null;
-    }
-    const valid = dimensions.every(function (dimension) {
-      return /^(?:\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:\.\d+)?)$/.test(dimension);
-    });
-    return valid ? dimensions : null;
-  }
-
-  /**
-   * Compare a stored size with the entered dimensions. Entering only the first dimensions matches
-   * every height, so "2x4" matches both "2x4x1" and "2x4x1/3".
-   */
-  function sizeMatches(size, dimensions) {
-    if (!dimensions || dimensions.length === 0) {
-      return true;
-    }
-    const parts = sizeDimensions(size);
-    if (parts.length < dimensions.length) {
-      return false;
-    }
-    return dimensions.every(function (dimension, index) { return dimension === parts[index]; });
-  }
-
-  function brickOwlMatches(part, tokens) {
-    return matchesCollectionQuery([
-      part.name,
-      part.boid,
-      part.type,
-      part.colorName,
-      part.colorId,
-      part.condition,
-      part.designIds,
-      part.itemNumbers,
-      BrickTools.getPartNameFromBOName(part.name || '', part.colorName || '')
-    ], tokens);
-  }
-
-  function pabMatches(part, tokens) {
-    return matchesCollectionQuery([
-      part.partNumber,
-      part.partName,
-      part.partCategory,
-      part.colorName,
-      part.partColorId
-    ], tokens);
-  }
-
-  function brickOwlName(part) {
-    return BrickTools.getPartNameFromBOName(part.name || '', part.colorName || '');
-  }
-
-  function sortedBrickOwlParts(list) {
-    const shared = BrickTools.PartsCollectionShared;
-    return list.slice().sort(function (a, b) {
-      return shared.compareValues(brickOwlName(a), brickOwlName(b), 1)
-        || shared.compareValues(a.colorName, b.colorName, 1);
-    });
-  }
-
-  function collapsePabParts(list) {
-    const byPart = new Map();
-    list.forEach(function (part) {
-      const key = String(part.partNumber == null ? '' : part.partNumber) + '\u0000'
-        + String(part.partColorId == null ? '' : part.partColorId);
-      const existing = byPart.get(key);
-      if (!existing) {
-        byPart.set(key, Object.assign({}, part));
-        return;
-      }
-      existing.quantity = (Number(existing.quantity) || 0) + (Number(part.quantity) || 0);
-    });
-    return Array.from(byPart.values());
-  }
-
-  function sortedPabParts(list) {
-    const shared = BrickTools.PartsCollectionShared;
-    return collapsePabParts(list).sort(function (a, b) {
-      return shared.compareValues(a.partName, b.partName, 1)
-        || shared.compareValues(a.partNumber, b.partNumber, 1)
-        || shared.compareValues(a.colorName, b.colorName, 1);
-    });
-  }
+  // Pure collection helpers now live in partscollection-collection-utils.js.
+  const collectionTokens = BrickTools.CollectionUtils.collectionTokens;
+  const matchesCollectionQuery = BrickTools.CollectionUtils.matchesCollectionQuery;
+  const normalizeSizeText = BrickTools.CollectionUtils.normalizeSizeText;
+  const sizeDimensions = BrickTools.CollectionUtils.sizeDimensions;
+  const parseSizeQuery = BrickTools.CollectionUtils.parseSizeQuery;
+  const sizeMatches = BrickTools.CollectionUtils.sizeMatches;
+  const brickOwlMatches = BrickTools.CollectionUtils.brickOwlMatches;
+  const pabMatches = BrickTools.CollectionUtils.pabMatches;
+  const brickOwlName = BrickTools.CollectionUtils.brickOwlName;
+  const sortedBrickOwlParts = BrickTools.CollectionUtils.sortedBrickOwlParts;
+  const collapsePabParts = BrickTools.CollectionUtils.collapsePabParts;
+  const sortedPabParts = BrickTools.CollectionUtils.sortedPabParts;
 
   function resetCollectionResults() {
     $('#collection-drawers').empty();
@@ -1055,46 +560,6 @@ body { background: #f3f4f6; color: #111827;
   // ============================================================================
   // Drawer content helpers
   // ============================================================================
-
-  function splitRuleTokens(value) {
-    return String(value == null ? '' : value)
-      .split(';')
-      .map(function (token) { return token.trim(); })
-      .filter(function (token) { return token.length > 0; });
-  }
-
-  function tokenKey(token) {
-    return String(token == null ? '' : token).toLowerCase();
-  }
-
-  function canonicalColorToken(token) {
-    const lower = String(token || '').toLowerCase();
-    if (lower === 'any') {
-      return 'Any';
-    }
-    if (lower === 'other') {
-      return 'Other';
-    }
-    if (lower === 'decorated') {
-      return 'Decorated';
-    }
-    return String(token || '').trim();
-  }
-
-  function uniqueRuleTokens(value, canonicalize) {
-    const seen = {};
-    const result = [];
-    splitRuleTokens(value).forEach(function (token) {
-      const normalized = canonicalize ? canonicalize(token) : token;
-      const key = tokenKey(normalized);
-      if (!normalized || seen[key]) {
-        return;
-      }
-      seen[key] = true;
-      result.push(normalized);
-    });
-    return result;
-  }
 
   function getRulePartTokens() {
     return splitRuleTokens($('#collection-rule-parts').val());
