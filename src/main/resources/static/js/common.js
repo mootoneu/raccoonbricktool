@@ -1,6 +1,8 @@
 (function (window, $) {
   'use strict';
 
+  window.BrickTools = window.BrickTools || {};
+
   const NAV = [
     { id: 'purchases', label: 'Sets Purchase', href: 'purchases.html' },
     { id: 'brickowl', label: 'BrickOwl', href: 'brickowl.html' },
@@ -420,11 +422,11 @@
     decorateIcons(document);
   });
 
-  window.BrickTools = {
+  Object.assign(window.BrickTools, {
     api, errorOf, esc, fmt, tag, initHeader, initTabs,
     storageGet, storageSet,
     getCookie, setCookie, rememberedOption, today, readableText, getPartNameFromBOName,
     partImageCell, firstCommaValue, itemImageUrls, partImageUrls,
     icon, iconButton, decorateIcons
-  };
+  });
 })(window, jQuery);
