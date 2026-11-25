@@ -2,6 +2,7 @@ package com.bricktools.brickonomics;
 
 import com.bricktools.config.BrickToolsProperties;
 import com.bricktools.csv.Csv;
+import com.bricktools.csv.FileLocks;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Path;
@@ -29,7 +30,8 @@ public class BrickonomicsService {
 
   private final String baseUrl;
   private final Path pricesFile;
-  private long lastRequestAt;
+  private final Object throttleLock = new Object();
+  private long nextRequestAt;
 
   @Autowired
   public BrickonomicsService(BrickToolsProperties props) {
@@ -41,7 +43,7 @@ public class BrickonomicsService {
     this.pricesFile = props.dataPath().resolve("bw/setprices.csv");
   }
 
-  public synchronized Map<String, Object> fetchPrice(String setNumber) throws IOException, InterruptedException {
+  public Map<String, Object> fetchPrice(String setNumber) throws IOException, InterruptedException {
     String key = setNumber == null ? "" : setNumber.trim();
     if (!key.matches("[A-Za-z0-9-]+")) {
       throw new IllegalArgumentException("Invalid set number: " + setNumber);
@@ -53,19 +55,20 @@ public class BrickonomicsService {
       throw new IllegalStateException("No retail price found on Brickonomics for set " + number);
     }
 
-    List<Map<String, String>> rows = new ArrayList<>();
-    for (Map<String, String> row : Csv.read(pricesFile)) {
-      if (!number.equals(row.get("SetNumber"))) {
-        rows.add(row);
+    return FileLocks.call(pricesFile, () -> {
+      List<Map<String, String>> rows = new ArrayList<>();
+      for (Map<String, String> row : Csv.read(pricesFile)) {
+        if (!number.equals(row.get("SetNumber"))) {
+          rows.add(row);
+        }
       }
-    }
-    Map<String, String> row = new LinkedHashMap<>();
-    row.put("SetNumber", number);
-    row.put("LegoPrice", price.toPlainString());
-    rows.add(row);
-    Csv.write(pricesFile, HEADERS, rows);
-
-    return Map.of("setNumber", number, "legoPrice", price, "source", "brickonomics");
+      Map<String, String> row = new LinkedHashMap<>();
+      row.put("SetNumber", number);
+      row.put("LegoPrice", price.toPlainString());
+      rows.add(row);
+      Csv.write(pricesFile, HEADERS, rows);
+      return Map.of("setNumber", number, "legoPrice", price, "source", "brickonomics");
+    });
   }
 
   private BigDecimal scrape(String setNumber) throws IOException, InterruptedException {
@@ -88,11 +91,20 @@ public class BrickonomicsService {
   }
 
   private void throttle() throws InterruptedException {
-    long wait = MIN_DELAY_MS - (System.currentTimeMillis() - lastRequestAt);
+    long slot = reserveRequestSlot();
+    long wait = slot - System.currentTimeMillis();
     if (wait > 0) {
       Thread.sleep(wait);
     }
-    lastRequestAt = System.currentTimeMillis();
+  }
+
+  private long reserveRequestSlot() {
+    synchronized (throttleLock) {
+      long now = System.currentTimeMillis();
+      long slot = Math.max(now, nextRequestAt);
+      nextRequestAt = slot + MIN_DELAY_MS;
+      return slot;
+    }
   }
 
   static BigDecimal parsePrice(String text) {

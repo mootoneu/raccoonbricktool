@@ -34,15 +34,27 @@ public final class Csv {
   }
 
   public static void write(Path file, List<String> headers, List<Map<String, String>> rows) throws IOException {
-    Files.createDirectories(file.toAbsolutePath().getParent());
-    Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
-    try (Writer writer = Files.newBufferedWriter(tmp, StandardCharsets.UTF_8);
-         CSVPrinter printer = new CSVPrinter(writer,
-             CSVFormat.DEFAULT.builder().setHeader(headers.toArray(String[]::new)).build())) {
-      for (Map<String, String> row : rows) {
-        printer.printRecord(headers.stream().map(h -> row.getOrDefault(h, "")).toList());
+    // A unique temporary name in the target directory keeps concurrent writers from clobbering each other's temp file.
+    Path directory = file.toAbsolutePath().getParent();
+    Files.createDirectories(directory);
+    Path tmp = Files.createTempFile(directory, file.getFileName().toString() + ".", ".tmp");
+    FileLocks.forFile(file).lock();
+    boolean moved = false;
+    try {
+      try (Writer writer = Files.newBufferedWriter(tmp, StandardCharsets.UTF_8);
+           CSVPrinter printer = new CSVPrinter(writer,
+               CSVFormat.DEFAULT.builder().setHeader(headers.toArray(String[]::new)).build())) {
+        for (Map<String, String> row : rows) {
+          printer.printRecord(headers.stream().map(h -> row.getOrDefault(h, "")).toList());
+        }
       }
+      Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
+      moved = true;
+    } finally {
+      if (!moved) {
+        Files.deleteIfExists(tmp);
+      }
+      FileLocks.forFile(file).unlock();
     }
-    Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
   }
 }

@@ -159,6 +159,8 @@ Never place a `.env` file under `src/main/resources`: Maven copies that director
 
 The backend keeps slow work (downloads, network scraping, throttling sleeps) outside service-wide locks: `RebrickableService.status()` stays responsive during an update, `BrickWatchService` reserves throttle slots without sleeping under a lock, and `SetImageService` uses per-set download locks. Keep that property when changing those services.
 
+CSV writes are coordinated by a registry of per-file locks (`FileLocks`), because several services write the same file (notably `bw/setprices.csv`). `Csv.write` also uses a unique temporary file in the target directory, so concurrent writers cannot clobber one another. Use `FileLocks.call` for read-modify-write sequences.
+
 The frontend is plain JavaScript served from `src/main/resources/static`. There is no build step for the static assets; restart or repackage the application after changing them.
 
 ## Contributing

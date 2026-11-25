@@ -2,6 +2,7 @@ package com.bricktools.brickwatch;
 
 import com.bricktools.config.BrickToolsProperties;
 import com.bricktools.csv.Csv;
+import com.bricktools.csv.FileLocks;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Path;
@@ -29,7 +30,6 @@ public class BrickWatchService {
   private final BrickToolsProperties props;
   private final Path pricesFile;
   private final Object throttleLock = new Object();
-  private final Object writeLock = new Object();
   private long nextRequestAt;
 
   public BrickWatchService(BrickToolsProperties props) {
@@ -54,16 +54,21 @@ public class BrickWatchService {
       throw new IllegalStateException("No official price found on BrickWatch for set " + key);
     }
 
-    synchronized (writeLock) {
+    return FileLocks.call(pricesFile, () -> {
+      for (Map<String, String> row : Csv.read(pricesFile)) {
+        if (key.equals(row.get("SetNumber"))) {
+          return Map.<String, Object>of("setNumber", key, "legoPrice", new BigDecimal(row.get("LegoPrice")),
+              "source", "stored");
+        }
+      }
       List<Map<String, String>> rows = new ArrayList<>(Csv.read(pricesFile));
       Map<String, String> row = new LinkedHashMap<>();
       row.put("SetNumber", key);
       row.put("LegoPrice", price.toPlainString());
       rows.add(row);
       Csv.write(pricesFile, HEADERS, rows);
-    }
-
-    return Map.of("setNumber", key, "legoPrice", price, "source", "brickwatch");
+      return Map.of("setNumber", key, "legoPrice", price, "source", "brickwatch");
+    });
   }
 
   private BigDecimal scrape(String setNumber) throws IOException, InterruptedException {
